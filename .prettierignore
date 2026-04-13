@@ -1,0 +1,20 @@
+# Builds
+dist
+build
+.next
+out
+coverage
+
+# Dependencies
+node_modules
+
+# Generated / cache
+.turbo
+.cache
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+*.lock
+bun.lock
