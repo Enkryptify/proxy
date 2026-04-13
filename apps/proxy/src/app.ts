@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { corsPlugin } from "./plugins/cors";
 import { requestLogger } from "./lib/middleware/logger";
-import { registerRoutes } from "./modules";
+import { registerModules } from "./modules";
 
 const app = new Hono();
 
 app.use("*", corsPlugin);
 app.use("*", requestLogger);
 
-registerRoutes(app);
+registerModules(app);
 
 export default {
   fetch: app.fetch,
