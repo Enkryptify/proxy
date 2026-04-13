@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^1.3.0",
     "@hono/zod-validator": "latest",
     "@proxy/types": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
