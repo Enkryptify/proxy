@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi";
 
 export const healthResponseSchema = z.object({
-  status: z.enum(["ok", "error"]),
+  status: z.string(),
   timestamp: z.string(),
 });
