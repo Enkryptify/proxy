@@ -1,14 +1,10 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { getHealthRoute } from "./health.routes";
-import HealthService from "./health.service";
+import { healthRoutes } from "./health.routes";
 
-const service = new HealthService();
+export default function healthModule() {
+  const app = new OpenAPIHono();
 
-export default function healthModule(app: OpenAPIHono) {
-
-  app.openapi(getHealthRoute, (c) => {
-    return c.json(service.getStatus(), 200);
-  });
+  app.route("/", healthRoutes);
 
   return app;
 }
