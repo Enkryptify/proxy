@@ -7,17 +7,18 @@ export default class ProxyService {
   async forward(request: ProxyRequest): Promise<ProxyResponse> {
     const { url, method, headers, body } = request;
 
-    await assertExternalUrl(url);
+    const { resolvedUrl, originalHostname } = await assertExternalUrl(url);
 
+    const outgoingHeaders = { ...headers, Host: originalHostname };
     const hasBody = method !== "GET" && method !== "HEAD" && body !== undefined;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      const response = await fetch(url, {
+      const response = await fetch(resolvedUrl, {
         method,
-        headers,
+        headers: outgoingHeaders,
         body: hasBody ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });

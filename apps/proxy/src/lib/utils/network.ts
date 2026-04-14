@@ -6,17 +6,22 @@ const PRIVATE_RANGES = [
   /^0\./,
   /^169\.254\./,
   /^::1$/,
-  /^fe80:/i,
-  /^fc00:/i,
-  /^fd00:/i,
+  /^fe[89ab][0-9a-f]:/i,
+  /^f[cd][0-9a-f]{2}:/i,
 ];
 
 function isPrivateIP(ip: string): boolean {
   return PRIVATE_RANGES.some((range) => range.test(ip));
 }
 
-export async function assertExternalUrl(url: string): Promise<void> {
-  const { hostname } = new URL(url);
+type ValidatedUrl = {
+  resolvedUrl: string;
+  originalHostname: string;
+};
+
+export async function assertExternalUrl(url: string): Promise<ValidatedUrl> {
+  const parsed = new URL(url);
+  const { hostname } = parsed;
 
   if (hostname === "localhost") {
     throw new Error("Requests to localhost are not allowed");
@@ -26,17 +31,25 @@ export async function assertExternalUrl(url: string): Promise<void> {
     throw new Error("Requests to private IP addresses are not allowed");
   }
 
-  const resolved = await resolveHostname(hostname);
-  if (resolved && isPrivateIP(resolved)) {
-    throw new Error("Hostname resolves to a private IP address");
-  }
-}
+  const results = await Bun.dns.lookup(hostname);
 
-async function resolveHostname(hostname: string): Promise<string | null> {
-  try {
-    const results = await Bun.dns.lookup(hostname);
-    return results[0]?.address ?? null;
-  } catch {
-    return null;
+  if (results.length === 0) {
+    throw new Error("Hostname could not be resolved");
   }
+
+  for (const { address } of results) {
+    if (isPrivateIP(address)) {
+      throw new Error("Hostname resolves to a private IP address");
+    }
+  }
+
+  const resolvedIp = results[0].address;
+  const isIPv6 = resolvedIp.includes(":");
+
+  parsed.hostname = isIPv6 ? `[${resolvedIp}]` : resolvedIp;
+
+  return {
+    resolvedUrl: parsed.toString(),
+    originalHostname: hostname,
+  };
 }
