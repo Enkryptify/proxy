@@ -29,7 +29,7 @@ export default class ProxyService {
     }
   }
 
-  async #processResponse(response: Response): Promise<ProxyResponse> {
+  async #processResponse(response: Response) {
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
