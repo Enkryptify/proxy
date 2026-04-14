@@ -1,5 +1,5 @@
 import type { ProxyRequest, ProxyResponse } from "./proxy.schemas";
-import { assertExternalUrl } from "../../../lib/utils/network";
+import { assertExternalUrl } from "@/lib/utils/network";
 
 const FETCH_TIMEOUT_MS = 30_000;
 
