@@ -12,7 +12,7 @@ import ProxyService from "./proxy.service";
 
 const postProxyRoute = createRoute({
   method: "post",
-  path: "/{workspace}/{project}/{environmentId}",
+  path: "/proxy/{workspace}/{project}/{environmentId}",
   tags: ["proxy"],
   request: {
     params: proxyParamsSchema,
