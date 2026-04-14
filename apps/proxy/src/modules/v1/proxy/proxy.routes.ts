@@ -44,6 +44,13 @@ proxyRoutes.openapi(postProxyRoute, async (c) => {
   const { authorization } = c.req.valid("header");
   const { workspace, project, environmentId } = c.req.valid("param");
   const request = c.req.valid("json");
-  const result = await service.forward(request, authorization, workspace, project, environmentId.toString());
-  return c.json(result, 200);
+
+  try {
+    const result = await service.forward(request, authorization, workspace, project, environmentId.toString());
+    return c.json(result, 200);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`Proxy forward failed: ${message}`);
+    return c.json({ error: `Failed to reach target: ${message}` }, 502);
+  }
 });

@@ -1,7 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
 export const proxyRequestSchema = z.object({
-  url: z.string(),
+  url: z.url().refine(
+    (u) => u.startsWith("http://") || u.startsWith("https://"),
+    { message: "URL must use http:// or https://" },
+  ),
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]),
   headers: z.record(z.string(), z.string()).optional().default({}),
   body: z.unknown().optional()
