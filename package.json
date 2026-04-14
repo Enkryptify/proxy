@@ -17,5 +17,8 @@
     "turbo": "latest",
     "typescript": "latest"
   },
-  "packageManager": "bun@1.2.9"
+  "packageManager": "bun@1.2.9",
+  "dependencies": {
+    "@enkryptify/sdk": "^0.1.2"
+  }
 }

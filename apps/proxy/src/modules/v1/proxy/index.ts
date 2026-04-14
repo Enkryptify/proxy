@@ -1,7 +1,9 @@
-import { OpenAPIHono } from "@hono/zod-openapi";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import { registerProxyRoutes } from "./proxy.routes";
+import ProxyService from "./proxy.service";
 
-export default function proxyModule() {
-  const app = new OpenAPIHono();
+const service = new ProxyService();
 
-  return app;
+export default function proxyModule(app: OpenAPIHono) {
+  registerProxyRoutes(app, service);
 }
