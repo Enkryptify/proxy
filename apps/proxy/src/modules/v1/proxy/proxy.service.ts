@@ -1,10 +1,13 @@
 import type { ProxyRequest, ProxyResponse } from "./proxy.schemas";
+import { assertExternalUrl } from "../../../lib/utils/network";
 
 const FETCH_TIMEOUT_MS = 30_000;
 
 export default class ProxyService {
   async forward(request: ProxyRequest): Promise<ProxyResponse> {
     const { url, method, headers, body } = request;
+
+    await assertExternalUrl(url);
 
     const hasBody = method !== "GET" && method !== "HEAD" && body !== undefined;
 
