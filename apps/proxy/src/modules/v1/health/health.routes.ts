@@ -1,9 +1,8 @@
-import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createRoute } from "@hono/zod-openapi";
 import { healthResponseSchema } from "./health.schemas";
 import { jsonContent } from "../../../lib/utils/openapi";
 import HealthService from "./health.service";
-
-const service = new HealthService();
 
 const getHealthRoute = createRoute({
   method: "get",
@@ -14,8 +13,8 @@ const getHealthRoute = createRoute({
   },
 });
 
-export const healthRoutes = new OpenAPIHono();
-
-healthRoutes.openapi(getHealthRoute, (c) => {
-  return c.json(service.getStatus(), 200);
-});
+export function registerHealthRoutes(app: OpenAPIHono, service: HealthService) {
+  app.openapi(getHealthRoute, (c) => {
+    return c.json(service.getStatus(), 200);
+  });
+}

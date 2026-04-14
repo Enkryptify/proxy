@@ -1,6 +1,9 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { healthRoutes } from "./health.routes";
+import { registerHealthRoutes } from "./health.routes";
+import HealthService from "./health.service";
+
+const service = new HealthService();
 
 export default function healthModule(app: OpenAPIHono) {
-  app.route("/health", healthRoutes);
+  registerHealthRoutes(app, service);
 }
