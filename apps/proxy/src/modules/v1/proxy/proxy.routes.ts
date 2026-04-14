@@ -1,12 +1,6 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createRoute } from "@hono/zod-openapi";
-import {
-  proxyRequestSchema,
-  proxyParamsSchema,
-  proxyRequestHeadersSchema,
-  proxyResponseSchema,
-  proxyErrorSchema,
-} from "./proxy.schemas";
+import { proxyRequestSchema, proxyParamsSchema, proxyRequestHeadersSchema, proxyResponseSchema, proxyErrorSchema } from "./proxy.schemas";
 import { jsonContent, jsonBody } from "@/lib/utils/openapi";
 import ProxyService from "./proxy.service";
 
@@ -21,23 +15,21 @@ const postProxyRoute = createRoute({
   },
   responses: {
     200: jsonContent(proxyResponseSchema, "Proxied response from the target endpoint"),
-    400: jsonContent(proxyErrorSchema, "Invalid request"),
-    502: jsonContent(proxyErrorSchema, "Target endpoint unreachable or returned an error"),
+    400: jsonContent(proxyErrorSchema, "Invalid request or target URL"),
+    401: jsonContent(proxyErrorSchema, "Invalid or expired authentication token"),
+    403: jsonContent(proxyErrorSchema, "Insufficient permissions"),
+    429: jsonContent(proxyErrorSchema, "Rate limited"),
+    502: jsonContent(proxyErrorSchema, "Target endpoint unreachable or secret provider unavailable"),
   },
 });
 
 export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
-  app.openapi(postProxyRoute, async (c) => {
-    const { authorization } = c.req.valid("header");
-    const { workspace, project, environmentId } = c.req.valid("param");
-    const request = c.req.valid("json");
+  app.openapi(postProxyRoute, async (context) => {
+    const { authorization } = context.req.valid("header");
+    const { workspace, project, environmentId } = context.req.valid("param");
+    const request = context.req.valid("json");
 
-    try {
-      const result = await service.forward(request);
-      return c.json(result, 200);
-    } catch (error) {
-      console.error("Proxy forward failed:", error);
-      return c.json({ error: "Failed to reach target" }, 502);
-    }
+    const result = await service.forward(request, authorization, workspace, project, environmentId);
+    return context.json(result, 200);
   });
 }
