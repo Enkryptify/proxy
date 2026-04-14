@@ -7,7 +7,7 @@ export const proxyRequestSchema = z.object({
   ),
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]),
   headers: z.record(z.string(), z.string()).optional().default({}),
-  body: z.unknown().optional()
+  body: z.json().optional()
 });
 
 export const proxyResponseSchema = z.object({

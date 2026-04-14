@@ -3,8 +3,10 @@ import healthModule from "./v1/health";
 import proxyModule from "./v1/proxy";
 
 export function registerModules(app: OpenAPIHono) {
-  app.route("/health", healthModule(app));
-  app.route("/proxy", proxyModule(app));
+  const v1 = new OpenAPIHono();
 
-  app.route("/v1", app);
+  healthModule(v1);
+  proxyModule(v1);
+
+  app.route("/v1", v1);
 }
