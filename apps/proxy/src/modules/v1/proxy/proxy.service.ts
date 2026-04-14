@@ -34,14 +34,16 @@ export default class ProxyService {
     let responseBody: unknown;
     const contentType = response.headers.get("content-type") ?? "";
 
+    const text = await response.text();
+
     if (contentType.includes("application/json")) {
       try {
-        responseBody = await response.json();
+        responseBody = JSON.parse(text);
       } catch {
-        responseBody = await response.text();
+        responseBody = text;
       }
     } else {
-      responseBody = await response.text();
+      responseBody = text;
     }
 
     return {

@@ -27,7 +27,7 @@ export const proxyParamsSchema = z.object({
 });
 
 export const proxyRequestHeadersSchema = z.object({
-  authorization: z.string().regex(/^Bearer .+$/),
+  authorization: z.string().regex(/^[Bb]earer \S+$/, { message: "Must be a valid Bearer token" }),
 });
 
 export type ProxyError = z.infer<typeof proxyErrorSchema>;

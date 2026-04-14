@@ -9,6 +9,7 @@ import {
 } from "./proxy.schemas";
 import { jsonContent, jsonBody } from "@/lib/utils/openapi";
 import ProxyService from "./proxy.service";
+
 const postProxyRoute = createRoute({
   method: "post",
   path: "/{workspace}/{project}/{environmentId}",
@@ -35,9 +36,8 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
       const result = await service.forward(request);
       return c.json(result, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      console.error(`Proxy forward failed: ${message}`);
-      return c.json({ error: `Failed to reach target: ${message}` }, 502);
+      console.error("Proxy forward failed:", error);
+      return c.json({ error: "Failed to reach target" }, 502);
     }
   });
 }
