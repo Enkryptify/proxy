@@ -5,7 +5,7 @@ import proxyModule from "./v1/proxy";
 export function registerModules(app: OpenAPIHono) {
   const v1 = new OpenAPIHono();
 
-  healthModule(v1);
+  healthModule(app);
   proxyModule(v1);
 
   app.route("/v1", v1);
