@@ -6,6 +6,7 @@ import {
   proxyResponseSchema,
   proxyErrorSchema,
 } from "./proxy.schemas";
+import { jsonContent, jsonBody } from "@/lib/utils/openapi";
 import ProxyService from "./proxy.service";
 
 const service = new ProxyService();
@@ -17,24 +18,12 @@ const postProxyRoute = createRoute({
   request: {
     params: proxyParamsSchema,
     headers: proxyRequestHeadersSchema,
-    body: {
-      content: { "application/json": { schema: proxyRequestSchema } },
-      required: true,
-    },
+    body: jsonBody(proxyRequestSchema),
   },
   responses: {
-    200: {
-      content: { "application/json": { schema: proxyResponseSchema } },
-      description: "Proxied response from the target endpoint",
-    },
-    400: {
-      content: { "application/json": { schema: proxyErrorSchema } },
-      description: "Invalid request",
-    },
-    502: {
-      content: { "application/json": { schema: proxyErrorSchema } },
-      description: "Target endpoint unreachable or returned an error",
-    },
+    200: jsonContent(proxyResponseSchema, "Proxied response from the target endpoint"),
+    400: jsonContent(proxyErrorSchema, "Invalid request"),
+    502: jsonContent(proxyErrorSchema, "Target endpoint unreachable or returned an error"),
   },
 });
 
@@ -46,7 +35,7 @@ proxyRoutes.openapi(postProxyRoute, async (c) => {
   const request = c.req.valid("json");
 
   try {
-    const result = await service.forward(request, authorization, workspace, project, environmentId.toString());
+    const result = await service.forward(request);
     return c.json(result, 200);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

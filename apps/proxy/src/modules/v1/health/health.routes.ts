@@ -1,5 +1,6 @@
 import { OpenAPIHono, createRoute } from "@hono/zod-openapi";
 import { healthResponseSchema } from "./health.schemas";
+import { jsonContent } from "../../../lib/utils/openapi";
 import HealthService from "./health.service";
 
 const service = new HealthService();
@@ -9,10 +10,7 @@ const getHealthRoute = createRoute({
   path: "/",
   tags: ["health"],
   responses: {
-    200: {
-      content: { "application/json": { schema: healthResponseSchema } },
-      description: "Health status",
-    },
+    200: jsonContent(healthResponseSchema, "Health status"),
   },
 });
 

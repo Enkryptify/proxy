@@ -3,7 +3,7 @@ import type { ProxyRequest, ProxyResponse } from "./proxy.schemas";
 const FETCH_TIMEOUT_MS = 30_000;
 
 export default class ProxyService {
-  async forward(request: ProxyRequest, authorization: string, workspace: string, project: string, environmentId: string): Promise<ProxyResponse> {
+  async forward(request: ProxyRequest): Promise<ProxyResponse> {
     const { url, method, headers, body } = request;
 
     const hasBody = method !== "GET" && method !== "HEAD" && body !== undefined;
