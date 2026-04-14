@@ -1,7 +1,7 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createRoute } from "@hono/zod-openapi";
 import { healthResponseSchema } from "./health.schemas";
-import { jsonContent } from "../../lib/utils/openapi";
+import { jsonContent } from "@/lib/utils/openapi";
 import HealthService from "./health.service";
 
 const getHealthRoute = createRoute({
