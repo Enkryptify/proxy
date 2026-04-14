@@ -1,23 +1,23 @@
-import type { ProxyRequest } from "./proxy.schemas";
-
-export type ProxyResponse = {
-  status: number;
-  headers: Record<string, string>;
-  body: unknown;
-};
+import type { ProxyRequest, ProxyResponse } from "./proxy.schemas";
 
 export default class ProxyService {
-  async forward(request: ProxyRequest): Promise<ProxyResponse> {
+  async forward(request: ProxyRequest, authorization: string, workspace: string, project: string, environmentId: string): Promise<ProxyResponse> {
     const { url, method, headers, body } = request;
 
     const hasBody = method !== "GET" && method !== "HEAD" && body !== undefined;
 
+    // Request to the target endpoint
     const response = await fetch(url, {
       method,
       headers,
       body: hasBody ? JSON.stringify(body) : undefined,
     });
 
+    // Process the response
+    return this.#processResponse(response);
+  }
+
+  async #processResponse(response: Response): Promise<ProxyResponse> {
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
@@ -36,5 +36,5 @@ export default class ProxyService {
       headers: responseHeaders,
       body: responseBody,
     };
-  }
+}
 }
