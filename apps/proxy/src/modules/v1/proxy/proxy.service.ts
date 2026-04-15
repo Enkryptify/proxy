@@ -67,18 +67,19 @@ export default class ProxyService {
     } catch (error) {
       if (!(error instanceof EnkryptifyError)) throw error;
 
-      switch (error.constructor) {
-        case AuthenticationError:
-          throw new UnauthorizedError("Invalid or expired token");
-        case AuthorizationError:
-          throw new ForbiddenError("Insufficient permissions for the requested secrets");
-        case SecretNotFoundError:
-          throw new BadRequestError(error.message);
-        case RateLimitError:
-          throw new TooManyRequestsError("Secret retrieval rate limited", (error as RateLimitError).retryAfter);
-        default:
-          throw new BadGatewayError("Secret provider unavailable");
+      if (error instanceof AuthenticationError) {
+        throw new UnauthorizedError("Invalid or expired token");
       }
+      if (error instanceof AuthorizationError) {
+        throw new ForbiddenError("Insufficient permissions for the requested secrets");
+      }
+      if (error instanceof SecretNotFoundError) {
+        throw new BadRequestError(error.message);
+      }
+      if (error instanceof RateLimitError) {
+        throw new TooManyRequestsError("Secret retrieval rate limited", error.retryAfter);
+      }
+      throw new BadGatewayError("Secret provider unavailable");
     }
   }
 

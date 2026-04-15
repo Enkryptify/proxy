@@ -4,6 +4,7 @@ export class HttpError extends Error {
     message: string,
   ) {
     super(message);
+    this.name = new.target.name;
   }
 }
 

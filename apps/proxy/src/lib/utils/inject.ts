@@ -1,16 +1,12 @@
-import Enkryptify from "@enkryptify/sdk";
+import Enkryptify, { EnkryptifyError } from "@enkryptify/sdk";
 import type { InjectParams, InjectResult } from "@/modules/v1/proxy/proxy.schemas";
+import { BadRequestError } from "@/lib/utils/errors";
 
-//%placeholder% is a placeholder for a secret. It is replaced with the secret value when the request is made.
-const PLACEHOLDER_REGEX = /%([^%]+)%/g;
+
 
 function extractPlaceholders(value: string): string[] {
-  const matches: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = PLACEHOLDER_REGEX.exec(value)) !== null) {
-    matches.push(match[1]);
-  }
-  return matches;
+  //%placeholder% is a placeholder for a secret. It is replaced with the secret value when the request is made.
+  return [...value.matchAll(/%([^%]+)%/g)].map((m) => m[1]!);
 }
 
 async function resolveSecrets(
@@ -22,9 +18,19 @@ async function resolveSecrets(
 
   await Promise.all(
     unique.map(async (key) => {
-      const value = await client.get(key);
-      if (value !== null && value !== undefined) {
+      try {
+        const value = await client.get(key);
+        if (value === null || value === undefined) {
+          throw new BadRequestError(`Secret "${key}" could not be resolved (missing or empty)`);
+        }
         secrets.set(key, String(value));
+      } catch (error) {
+        if (error instanceof EnkryptifyError) throw error;
+        if (error instanceof BadRequestError) throw error;
+        throw new Error(
+          `Failed to resolve secret "${key}": ${error instanceof Error ? error.message : String(error)}`,
+          { cause: error },
+        );
       }
     }),
   );
@@ -33,7 +39,7 @@ async function resolveSecrets(
 }
 
 function replaceInString(value: string, secrets: Map<string, string>): string {
-  return value.replace(PLACEHOLDER_REGEX, (_, key: string) => {
+  return value.replace(new RegExp("%([^%]+)%", "g"), (_, key: string) => {
     return secrets.get(key) ?? `%${key}%`;
   });
 }
