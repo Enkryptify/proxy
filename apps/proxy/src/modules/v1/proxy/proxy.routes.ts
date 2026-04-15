@@ -18,6 +18,7 @@ const postProxyRoute = createRoute({
     400: jsonContent(proxyErrorSchema, "Invalid request or target URL"),
     401: jsonContent(proxyErrorSchema, "Invalid or expired authentication token"),
     403: jsonContent(proxyErrorSchema, "Insufficient permissions"),
+    404: jsonContent(proxyErrorSchema, "Workspace, project, or environment not found in Enkryptify"),
     429: jsonContent(proxyErrorSchema, "Rate limited"),
     502: jsonContent(proxyErrorSchema, "Target endpoint unreachable or secret provider unavailable"),
   },

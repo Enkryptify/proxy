@@ -2,6 +2,10 @@
  * Secret injection: finds `%SECRET_NAME%` in the outgoing URL, headers, and (when safe) body,
  * resolves values via Enkryptify, then substitutes. Binary or non-text bodies skip body substitution
  * so bytes are never interpreted as UTF-8 text (see body-secret-policy.ts).
+ *
+ * Flow: resolve placeholders in URL and headers first, derive Content-Type from the *substituted*
+ * headers, then decide whether the body may contain placeholders (text/JSON/XML only). Otherwise a
+ * placeholder only in `Content-Type` would be misclassified.
  */
 
 import Enkryptify, { EnkryptifyError } from "@enkryptify/sdk";
@@ -13,7 +17,6 @@ import {
 } from "@/lib/utils/body-secret-policy";
 
 function extractPlaceholders(value: string): string[] {
-  //%placeholder% is a placeholder for a secret. It is replaced with the secret value when the request is made.
   return [...value.matchAll(/%([^%]+)%/g)].map((m) => m[1]!);
 }
 
@@ -71,7 +74,7 @@ function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
 }
 
 /**
- * Collects placeholder names needed for Enkryptify. URL and headers are always scanned.
+ * Collects placeholder names. URL and headers are always scanned.
  * `includeBody` is false for binary / unsafe Content-Types so we never read `%...%` inside raw bytes.
  */
 function collectAllPlaceholders(
@@ -108,32 +111,51 @@ export async function injectSecrets(params: InjectParams): Promise<InjectResult>
   const { url, headers, body, bodyEncoding, workspace, project, environmentId, authorization } =
     params;
 
-  const mediaType = getContentTypeMediaType(headers);
-  const applyBodySubstitution = shouldApplySecretSubstitutionToBody(mediaType, bodyEncoding, body);
+  const keysFromUrlAndHeaders = collectAllPlaceholders(url, headers, body, false);
 
-  const allKeys = collectAllPlaceholders(url, headers, body, applyBodySubstitution);
+  const token = authorization.replace(/^[Bb]earer\s+/, "");
+  const createClient = () =>
+    new Enkryptify({
+      token,
+      workspace,
+      project,
+      environment: environmentId,
+    });
 
-  if (allKeys.length === 0) {
+  let secrets = new Map<string, string>();
+  if (keysFromUrlAndHeaders.length > 0) {
+    secrets = await resolveSecrets([...new Set(keysFromUrlAndHeaders)], createClient());
+  }
+
+  const headersAfterUrlHeaderPass = Object.fromEntries(
+    Object.entries(headers).map(([k, v]) => [k, replaceInString(v, secrets)]),
+  );
+
+  const applyBodySubstitution = shouldApplySecretSubstitutionToBody(
+    getContentTypeMediaType(headersAfterUrlHeaderPass),
+    bodyEncoding,
+    body,
+  );
+
+  const keysFromBody = applyBodySubstitution ? extractFromUnknown(body) : [];
+
+  if (keysFromUrlAndHeaders.length === 0 && keysFromBody.length === 0) {
     return { url, headers, body };
   }
 
-  const token = authorization.replace(/^[Bb]earer\s+/, "");
-
-  const client = new Enkryptify({
-    token,
-    workspace,
-    project,
-    environment: environmentId,
-  });
-
-  const secrets = await resolveSecrets(allKeys, client);
+  const missingBodyKeys = [...new Set(keysFromBody)].filter((k) => !secrets.has(k));
+  if (missingBodyKeys.length > 0) {
+    const more = await resolveSecrets(missingBodyKeys, createClient());
+    for (const [k, v] of more) {
+      secrets.set(k, v);
+    }
+  }
 
   return {
     url: replaceInString(url, secrets),
     headers: Object.fromEntries(
       Object.entries(headers).map(([k, v]) => [k, replaceInString(v, secrets)]),
     ),
-    // Body unchanged when substitution would corrupt binary or base64 payloads.
     body: applyBodySubstitution ? replaceInObject(body, secrets) : body,
   };
 }
