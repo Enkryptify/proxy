@@ -12,6 +12,7 @@ app.onError(errorHandler);
 
 registerModules(app);
 
+export { app };
 export default {
   fetch: app.fetch,
 };

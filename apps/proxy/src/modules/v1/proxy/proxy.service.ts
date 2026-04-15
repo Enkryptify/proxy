@@ -5,6 +5,7 @@ import {
   BadRequestError,
   BadGatewayError,
   ForbiddenError,
+  HttpError,
   NotFoundError,
   TooManyRequestsError,
   UnauthorizedError,
@@ -66,6 +67,10 @@ export default class ProxyService {
 
       return this.#processResponse(response);
     } catch (error) {
+      // Serialization / validation errors must not be turned into generic upstream 502s.
+      if (error instanceof HttpError) {
+        throw error;
+      }
       if (error instanceof DOMException && error.name === "AbortError") {
         throw new BadGatewayError("Target endpoint timed out");
       }
