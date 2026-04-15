@@ -14,6 +14,8 @@ export const proxyRequestSchema = z.object({
       description:
         "Forwarded as the upstream request body. Use a string for raw payloads (XML, plain text, preformatted data). Objects and arrays are JSON-encoded; set Content-Type on the request or the proxy adds application/json when missing for non-string bodies.",
     }),
+  /** When set, `body` is base64-decoded to raw bytes before upload (S3, etc.). Secret placeholders are not applied to the body. */
+  bodyEncoding: z.enum(["base64"]).optional(),
 });
 
 export const proxyResponseSchema = z.object({
@@ -38,7 +40,7 @@ export const proxyRequestHeadersSchema = z.object({
 
 /** Input to secret placeholder resolution (proxy body + path + auth). */
 export const injectParamsSchema = proxyRequestSchema
-  .pick({ url: true, headers: true, body: true })
+  .pick({ url: true, headers: true, body: true, bodyEncoding: true })
   .merge(proxyParamsSchema)
   .extend({
     authorization: proxyRequestHeadersSchema.shape.authorization,
