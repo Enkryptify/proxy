@@ -20,16 +20,20 @@ export default class ProxyService {
     const { resolvedUrl, originalHostname } = await this.#resolveUrl(injected.url);
 
     const outgoingHeaders = { ...injected.headers, Host: originalHostname };
-    const hasBody = method !== "GET" && method !== "HEAD" && injected.body !== undefined;
+    const hasBody = method !== "GET" && method !== "HEAD" && injected.body != null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
+      const bodyPayload = hasBody
+        ? this.#serializeUpstreamBody(injected.body, outgoingHeaders)
+        : undefined;
+
       const response = await fetch(resolvedUrl, {
         method,
         headers: outgoingHeaders,
-        body: hasBody ? JSON.stringify(injected.body) : undefined,
+        body: bodyPayload,
         signal: controller.signal,
       });
 
@@ -83,6 +87,25 @@ export default class ProxyService {
     }
   }
 
+  /**
+   * String bodies are sent as-is (XML, plain text, etc.). Other values are JSON-encoded;
+   * if `Content-Type` is absent, sets `application/json; charset=utf-8`.
+   */
+  #serializeUpstreamBody(body: unknown, headers: Record<string, string>): string {
+    if (typeof body === "string") {
+      return body;
+    }
+    if (!this.#hasHeader(headers, "content-type")) {
+      headers["Content-Type"] = "application/json; charset=utf-8";
+    }
+    return JSON.stringify(body);
+  }
+
+  #hasHeader(headers: Record<string, string>, name: string): boolean {
+    const lower = name.toLowerCase();
+    return Object.keys(headers).some((k) => k.toLowerCase() === lower);
+  }
+
   async #resolveUrl(url: string) {
     try {
       return await assertExternalUrl(url);
@@ -104,7 +127,9 @@ export default class ProxyService {
 
     const text = await response.text();
 
-    if (contentType.includes("application/json")) {
+    const isJson =
+      contentType.includes("application/json") || /\bjson\b/i.test(contentType);
+    if (isJson) {
       try {
         responseBody = JSON.parse(text);
       } catch {

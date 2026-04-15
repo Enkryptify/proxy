@@ -7,7 +7,13 @@ export const proxyRequestSchema = z.object({
   ),
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]),
   headers: z.record(z.string(), z.string()).optional().default({}),
-  body: z.json().optional()
+  body: z
+    .any()
+    .optional()
+    .openapi({
+      description:
+        "Forwarded as the upstream request body. Use a string for raw payloads (XML, plain text, preformatted data). Objects and arrays are JSON-encoded; set Content-Type on the request or the proxy adds application/json when missing for non-string bodies.",
+    }),
 });
 
 export const proxyResponseSchema = z.object({
