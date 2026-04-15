@@ -30,6 +30,23 @@ export const proxyRequestHeadersSchema = z.object({
   authorization: z.string().regex(/^[Bb]earer \S+$/, { message: "Must be a valid Bearer token" }),
 });
 
+/** Input to secret placeholder resolution (proxy body + path + auth). */
+export const injectParamsSchema = proxyRequestSchema
+  .pick({ url: true, headers: true, body: true })
+  .merge(proxyParamsSchema)
+  .extend({
+    authorization: proxyRequestHeadersSchema.shape.authorization,
+  });
+
+/** Output after `%KEY%` → secret substitution. */
+export const injectResultSchema = z.object({
+  url: z.string(),
+  headers: z.record(z.string(), z.string()),
+  body: z.unknown(),
+});
+
 export type ProxyError = z.infer<typeof proxyErrorSchema>;
 export type ProxyResponse = z.infer<typeof proxyResponseSchema>;
 export type ProxyRequest = z.infer<typeof proxyRequestSchema>;
+export type InjectParams = z.infer<typeof injectParamsSchema>;
+export type InjectResult = z.infer<typeof injectResultSchema>;

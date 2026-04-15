@@ -1,4 +1,5 @@
 import Enkryptify from "@enkryptify/sdk";
+import type { InjectParams, InjectResult } from "@/modules/v1/proxy/proxy.schemas";
 
 //%placeholder% is a placeholder for a secret. It is replaced with the secret value when the request is made.
 const PLACEHOLDER_REGEX = /%([^%]+)%/g;
@@ -80,22 +81,6 @@ function extractFromUnknown(value: unknown): string[] {
   }
   return [];
 }
-
-type InjectParams = {
-  url: string;
-  headers: Record<string, string>;
-  body: unknown;
-  workspace: string;
-  project: string;
-  environmentId: string;
-  authorization: string;
-};
-
-type InjectResult = {
-  url: string;
-  headers: Record<string, string>;
-  body: unknown;
-};
 
 export async function injectSecrets(params: InjectParams): Promise<InjectResult> {
   const { url, headers, body, workspace, project, environmentId, authorization } = params;
