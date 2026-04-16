@@ -107,6 +107,27 @@ function extractFromUnknown(value: unknown): string[] {
   return [];
 }
 
+type LoggingParams = Pick<InjectParams, "url" | "headers" | "body" | "bodyEncoding">;
+
+/**
+ * Unique `%KEY%` names present in the request (for audit). Aligns with inject rules: body is not
+ * scanned when `bodyEncoding` is base64 or when Content-Type disallows text substitution (raw headers).
+ */
+export function collectPlaceholderKeysForLogging(params: LoggingParams): string[] {
+  const keysFromUrlAndHeaders = collectAllPlaceholders(params.url, params.headers, params.body, false);
+  if (params.bodyEncoding === "base64") {
+    return [...new Set(keysFromUrlAndHeaders)];
+  }
+  const mediaType = getContentTypeMediaType(params.headers);
+  const applyBody = shouldApplySecretSubstitutionToBody(
+    mediaType,
+    params.bodyEncoding,
+    params.body,
+  );
+  const keysFromBody = applyBody ? extractFromUnknown(params.body) : [];
+  return [...new Set([...keysFromUrlAndHeaders, ...keysFromBody])];
+}
+
 export async function injectSecrets(params: InjectParams): Promise<InjectResult> {
   const { url, headers, body, bodyEncoding, workspace, project, environmentId, authorization } =
     params;

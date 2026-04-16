@@ -2,7 +2,11 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createRoute } from "@hono/zod-openapi";
 import { proxyRequestSchema, proxyParamsSchema, proxyRequestHeadersSchema, proxyResponseSchema, proxyErrorSchema } from "./proxy.schemas";
 import { jsonContent, jsonBody } from "@/lib/utils/openapi";
+import { collectPlaceholderKeysForLogging } from "@/lib/utils/inject";
+import { safeTargetHostFromUrl } from "@/lib/utils/safeTargetHost";
+import { HttpError } from "@/lib/utils/errors";
 import ProxyService from "./proxy.service";
+import { insertTunnelLogFailure, insertTunnelLogSuccess } from "./proxyTunnelLog";
 
 const postProxyRoute = createRoute({
   method: "post",
@@ -30,7 +34,40 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
     const { workspace, project, environmentId } = context.req.valid("param");
     const request = context.req.valid("json");
 
-    const result = await service.forward(request, authorization, workspace, project, environmentId);
-    return context.json(result, 200);
+    const started = performance.now();
+    const targetHost = safeTargetHostFromUrl(request.url);
+
+    let placeholderKeys: string[] = [];
+    try {
+      placeholderKeys = collectPlaceholderKeysForLogging({
+        url: request.url,
+        headers: request.headers,
+        body: request.body,
+        bodyEncoding: request.bodyEncoding,
+      });
+    } catch {
+      placeholderKeys = [];
+    }
+
+    const logBase = {
+      workspace,
+      project,
+      environmentId,
+      targetHost,
+      placeholderKeys,
+    };
+
+    try {
+      const result = await service.forward(request, authorization, workspace, project, environmentId);
+      const durationMs = Math.round(performance.now() - started);
+      await insertTunnelLogSuccess({ ...logBase, durationMs }, result.status);
+      return context.json(result, 200);
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - started);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const statusCode = error instanceof HttpError ? error.status : 500;
+      await insertTunnelLogFailure({ ...logBase, durationMs }, statusCode, message);
+      throw error;
+    }
   });
 }
