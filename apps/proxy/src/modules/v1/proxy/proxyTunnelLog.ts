@@ -1,3 +1,5 @@
+import { env } from "@/config/env";
+
 const MAX_ERROR_LEN = 16_000;
 
 function truncateError(message: string): string {
@@ -18,6 +20,9 @@ export async function insertTunnelLogSuccess(
   base: TunnelLogBase,
   upstreamStatusCode: number,
 ): Promise<void> {
+  if (!env.DATABASE_LOGGING) {
+    return;
+  }
   try {
     const { db } = await import("@/plugins/db");
     const { tunnel_log } = await import("@/lib/schemas");
@@ -45,6 +50,9 @@ export async function insertTunnelLogFailure(
   statusCode: number,
   errorMessage: string,
 ): Promise<void> {
+  if (!env.DATABASE_LOGGING) {
+    return;
+  }
   try {
     const { db } = await import("@/plugins/db");
     const { tunnel_log } = await import("@/lib/schemas");
