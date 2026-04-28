@@ -18,6 +18,13 @@ export type TunnelLogBase = {
   placeholderKeys: string[];
 };
 
+function normalizeDurationMs(durationMs: TunnelLogBase["durationMs"]): number {
+  if (!Number.isFinite(durationMs) || Number.isNaN(durationMs)) {
+    return 0;
+  }
+  return Math.max(0, Math.round(durationMs));
+}
+
 async function insertTunnelLog(
   base: TunnelLogBase,
   statusCode: number,
@@ -28,6 +35,7 @@ async function insertTunnelLog(
     return;
   }
   try {
+    const normalizedDurationMs = normalizeDurationMs(base.durationMs);
     const { db } = await import("@/plugins/db");
     const { tunnel_log } = await import("@/lib/schemas");
     await db.insert(tunnel_log).values({
@@ -39,7 +47,7 @@ async function insertTunnelLog(
       statusCode,
       outcome,
       errorMessage: errorMessage == null ? null : truncateError(errorMessage),
-      durationMs: base.durationMs,
+      durationMs: normalizedDurationMs,
       placeholderKeys: base.placeholderKeys,
     });
   } catch (err) {
