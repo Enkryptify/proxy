@@ -45,7 +45,14 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
         body: request.body,
         bodyEncoding: request.bodyEncoding,
       });
-    } catch {
+    } catch (error) {
+      if (process.env.NODE_ENV !== "test") {
+        console.warn("[proxy] placeholder key extraction failed", {
+          route: "POST /proxy/{workspace}/{project}/{environmentId}",
+          url: request.url,
+          error,
+        });
+      }
       placeholderKeys = [];
     }
 

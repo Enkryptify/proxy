@@ -9,4 +9,8 @@ describe("safeTargetHostFromUrl (no secrets in DB)", () => {
   test("returns hostname for IP literals (no path logged)", () => {
     expect(safeTargetHostFromUrl("http://203.0.113.5:9000/path")).toBe("203.0.113.5");
   });
+
+  test("returns invalid-url for malformed inputs", () => {
+    expect(safeTargetHostFromUrl("http://%ZZ")).toBe("invalid-url");
+  });
 });

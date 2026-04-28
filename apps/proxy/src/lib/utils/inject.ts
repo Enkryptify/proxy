@@ -119,12 +119,19 @@ export function collectPlaceholderKeysForLogging(params: LoggingParams): string[
     return [...new Set(keysFromUrlAndHeaders)];
   }
   const mediaType = getContentTypeMediaType(params.headers);
+  const contentTypeHeader = Object.entries(params.headers).find(
+    ([key]) => key.toLowerCase() === "content-type",
+  )?.[1];
+  const hasSecretBackedContentType =
+    typeof contentTypeHeader === "string" && extractPlaceholders(contentTypeHeader).length > 0;
   const applyBody = shouldApplySecretSubstitutionToBody(
     mediaType,
     params.bodyEncoding,
     params.body,
   );
-  const keysFromBody = applyBody ? extractFromUnknown(params.body) : [];
+  // If Content-Type itself is secret-backed, media type can't be derived here; include body keys
+  // conservatively so audit logs don't miss referenced placeholders.
+  const keysFromBody = applyBody || hasSecretBackedContentType ? extractFromUnknown(params.body) : [];
   return [...new Set([...keysFromUrlAndHeaders, ...keysFromBody])];
 }
 

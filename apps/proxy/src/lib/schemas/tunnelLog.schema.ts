@@ -1,5 +1,5 @@
 import { baseModel, createTable } from "./general"; 
-import { integer, jsonb, text, uuid, varchar } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, text, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const tunnel_log = createTable("tunnel_log", {
   ...baseModel,
@@ -16,4 +16,23 @@ export const tunnel_log = createTable("tunnel_log", {
   durationMs: integer("duration_ms").notNull(),
   /** Names of `%PLACEHOLDER%` keys referenced (never values). */
   placeholderKeys: jsonb("placeholder_keys").$type<string[]>(),
-});
+}, (table) => [
+  index("tunnel_log_ws_proj_env_created_at_idx").on(
+    table.workspace,
+    table.project,
+    table.environmentId,
+    table.createdAt,
+  ),
+  index("tunnel_log_ws_env_created_at_idx").on(
+    table.workspace,
+    table.environmentId,
+    table.createdAt,
+  ),
+  index("tunnel_log_ws_proj_env_status_created_at_idx").on(
+    table.workspace,
+    table.project,
+    table.environmentId,
+    table.statusCode,
+    table.createdAt,
+  ),
+]);

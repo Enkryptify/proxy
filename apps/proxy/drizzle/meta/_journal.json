@@ -8,6 +8,13 @@
       "when": 1776259269083,
       "tag": "0000_public_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777367600000,
+      "tag": "0001_tunnel_log_indexes",
+      "breakpoints": true
     }
   ]
 }
