@@ -7,10 +7,20 @@ let tunnelLogPromise: Promise<any> | null = null;
 
 async function getDbAndTunnelLog() {
   if (!dbPromise) {
-    dbPromise = import("@/plugins/db").then((m) => m.db);
+    dbPromise = import("@/plugins/db")
+      .then((m) => m.db)
+      .catch((err) => {
+        dbPromise = null;
+        throw err;
+      });
   }
   if (!tunnelLogPromise) {
-    tunnelLogPromise = import("@/lib/schemas").then((m) => m.tunnel_log);
+    tunnelLogPromise = import("@/lib/schemas")
+      .then((m) => m.tunnel_log)
+      .catch((err) => {
+        tunnelLogPromise = null;
+        throw err;
+      });
   }
   const [db, tunnel_log] = await Promise.all([dbPromise, tunnelLogPromise]);
   return { db, tunnel_log };
