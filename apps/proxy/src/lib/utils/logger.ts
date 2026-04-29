@@ -4,9 +4,12 @@ import { createLogger, format, transports } from "winston";
 import { env } from "@/config/env";
 
 const logDir = path.resolve(process.cwd(), "logs");
+let canUseFileTransport = true;
 try {
   fs.mkdirSync(logDir, { recursive: true });
-} catch {
+} catch (err) {
+  canUseFileTransport = false;
+  console.error("[logger] Failed to create logs directory, falling back to console-only logging.", err);
 }
 
 const filePath = path.join(logDir, "proxy.log");
@@ -44,12 +47,49 @@ export type ErrorLogMeta = {
   stack?: string;
 };
 
-export function sanitizeErrorLogMeta(meta: ErrorLogMeta): ErrorLogMeta {
-  return {
-    ...(meta.name ? { name: redactSecretsInString(meta.name) } : null),
-    ...(meta.message ? { message: redactSecretsInString(meta.message) } : null),
-    ...(meta.stack ? { stack: redactSecretsInString(meta.stack) } : null),
-  };
+function redactLogValue(value: any): any {
+  if (typeof value === "string") {
+    return redactSecretsInString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactLogValue(item));
+  }
+  if (value !== null && typeof value === "object") {
+    const output: Record<string, any> = {};
+    for (const [key, nested] of Object.entries(value)) {
+      output[key] = redactLogValue(nested);
+    }
+    return output;
+  }
+  return value;
+}
+
+const redactionFormat = format((info) => redactLogValue(info))();
+
+const loggerTransports: Array<
+  transports.ConsoleTransportInstance | transports.FileTransportInstance
+> = [
+  new transports.Console({
+    format: format.combine(
+      format.colorize(),
+      format.timestamp(),
+      format.printf(({ level, message, timestamp, ...meta }) => {
+        const metaJson = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
+        return `${timestamp} ${level}: ${message}${metaJson}`;
+      }),
+    ),
+  }),
+];
+
+if (canUseFileTransport) {
+  loggerTransports.push(
+    new transports.File({
+      filename: filePath,
+      level: "error",
+      maxsize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 5,
+    }),
+  );
 }
 
 export const logger = createLogger({
@@ -57,25 +97,9 @@ export const logger = createLogger({
   format: format.combine(
     format.timestamp(),
     format.errors({ stack: true }),
+    redactionFormat,
     format.json(),
   ),
-  transports: [
-    new transports.Console({
-      format: format.combine(
-        format.colorize(),
-        format.timestamp(),
-        format.printf(({ level, message, timestamp, ...meta }) => {
-          const metaJson = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
-          return `${timestamp} ${level}: ${message}${metaJson}`;
-        }),
-      ),
-    }),
-    new transports.File({
-      filename: filePath,
-      level: "error",
-      maxsize: 5 * 1024 * 1024, // 5MB
-      maxFiles: 5,
-    }),
-  ],
+  transports: loggerTransports,
 });
 

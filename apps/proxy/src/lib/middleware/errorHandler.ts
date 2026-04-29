@@ -1,7 +1,7 @@
 import type { ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { HttpError, TooManyRequestsError } from "@/lib/utils/errors";
-import { logger, sanitizeErrorLogMeta } from "@/lib/utils/logger";
+import { logger } from "@/lib/utils/logger";
 
 export const errorHandler: ErrorHandler = (err, c) => {
   if (err instanceof HttpError) {
@@ -16,6 +16,6 @@ export const errorHandler: ErrorHandler = (err, c) => {
     err instanceof Error
       ? { name: err.name, message: err.message, stack: err.stack }
       : { message: String(err) };
-  logger.error("Unhandled error", sanitizeErrorLogMeta(meta));
+  logger.error("Unhandled error", meta);
   return c.json({ error: "Something went wrong. Please try again." }, 500);
 };

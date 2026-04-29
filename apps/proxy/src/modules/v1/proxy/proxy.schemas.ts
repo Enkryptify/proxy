@@ -13,7 +13,7 @@ export const proxyRequestSchema = z.object({
 export const proxyResponseSchema = z.object({
   status: z.number(),
   headers: z.record(z.string(), z.string()),
-  body: z.any(),
+  body: z.unknown(),
 });
 
 export const proxyErrorSchema = z.object({
@@ -42,7 +42,7 @@ export const injectParamsSchema = proxyRequestSchema
 export const injectResultSchema = z.object({
   url: z.string(),
   headers: z.record(z.string(), z.string()),
-  body: z.any(),
+  body: z.unknown(),
 });
 
 export type ProxyError = z.infer<typeof proxyErrorSchema>;

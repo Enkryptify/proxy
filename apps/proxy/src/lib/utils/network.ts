@@ -17,12 +17,12 @@ function isPrivateIP(ip: string): boolean {
 
 type ValidatedUrl = {
   resolvedUrl: string;
-  originalHostname: string;
+  originalHostname: string; // host header value (includes port when present)
 };
 
 export async function assertExternalUrl(url: string): Promise<ValidatedUrl> {
   const parsed = new URL(url);
-  const { hostname } = parsed;
+  const { hostname, host } = parsed;
 
   if (hostname === "localhost") {
     throw new Error("Requests to localhost are not allowed");
@@ -51,6 +51,6 @@ export async function assertExternalUrl(url: string): Promise<ValidatedUrl> {
 
   return {
     resolvedUrl: parsed.toString(),
-    originalHostname: hostname,
+    originalHostname: host,
   };
 }
