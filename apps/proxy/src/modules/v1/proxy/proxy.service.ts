@@ -99,7 +99,7 @@ export default class ProxyService {
       responseHeaders[key] = value;
     });
 
-    let responseBody: unknown;
+    let responseBody: ProxyResponse["body"];
     const contentType = response.headers.get("content-type") ?? "";
 
     const text = await response.text();

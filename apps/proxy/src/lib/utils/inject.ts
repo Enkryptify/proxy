@@ -2,11 +2,12 @@ import Enkryptify, { EnkryptifyError } from "@enkryptify/sdk";
 import type { InjectParams, InjectResult } from "@/modules/v1/proxy/proxy.schemas";
 import { BadRequestError } from "@/lib/utils/errors";
 
-
+const PLACEHOLDER_REGEX = /%([^%]+)%/g;
 
 function extractPlaceholders(value: string): string[] {
   //%placeholder% is a placeholder for a secret. It is replaced with the secret value when the request is made.
-  return [...value.matchAll(/%([^%]+)%/g)].map((m) => m[1]!);
+  PLACEHOLDER_REGEX.lastIndex = 0;
+  return [...value.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]!);
 }
 
 async function resolveSecrets(
@@ -21,7 +22,7 @@ async function resolveSecrets(
       try {
         const value = await client.get(key);
         if (value === null || value === undefined) {
-          throw new BadRequestError(`Secret "${key}" could not be resolved (missing or empty)`);
+          throw new BadRequestError(`Secret "${key}" could not be resolved, it is either missing or empty.`);
         }
         secrets.set(key, String(value));
       } catch (error) {
@@ -39,12 +40,16 @@ async function resolveSecrets(
 }
 
 function replaceInString(value: string, secrets: Map<string, string>): string {
-  return value.replace(new RegExp("%([^%]+)%", "g"), (_, key: string) => {
+  PLACEHOLDER_REGEX.lastIndex = 0;
+  return value.replace(PLACEHOLDER_REGEX, (_, key: string) => {
     return secrets.get(key) ?? `%${key}%`;
   });
 }
 
-function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
+function replaceInObject(
+  obj: InjectParams["body"],
+  secrets: Map<string, string>,
+): InjectResult["body"] {
   if (typeof obj === "string") {
     return replaceInString(obj, secrets);
   }
@@ -52,7 +57,7 @@ function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
     return obj.map((item) => replaceInObject(item, secrets));
   }
   if (obj !== null && typeof obj === "object") {
-    const result: Record<string, unknown> = {};
+    const result: Record<string, InjectResult["body"]> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = replaceInObject(value, secrets);
     }
@@ -64,7 +69,7 @@ function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
 function collectAllPlaceholders(
   url: string,
   headers: Record<string, string>,
-  body: unknown,
+  body: InjectParams["body"],
 ): string[] {
   const keys: string[] = [];
 
@@ -74,16 +79,16 @@ function collectAllPlaceholders(
     keys.push(...extractPlaceholders(value));
   }
 
-  keys.push(...extractFromUnknown(body));
+  keys.push(...extractFromBodyValue(body));
 
   return keys;
 }
 
-function extractFromUnknown(value: unknown): string[] {
+function extractFromBodyValue(value: InjectParams["body"]): string[] {
   if (typeof value === "string") return extractPlaceholders(value);
-  if (Array.isArray(value)) return value.flatMap(extractFromUnknown);
+  if (Array.isArray(value)) return value.flatMap(extractFromBodyValue);
   if (value !== null && typeof value === "object") {
-    return Object.values(value).flatMap(extractFromUnknown);
+    return Object.values(value).flatMap(extractFromBodyValue);
   }
   return [];
 }
@@ -97,7 +102,9 @@ export async function injectSecrets(params: InjectParams): Promise<InjectResult>
     return { url, headers, body };
   }
 
-  const token = authorization.replace(/^[Bb]earer\s+/, "");
+  const token = authorization.toLowerCase().startsWith("bearer ")
+    ? authorization.slice("bearer ".length)
+    : authorization;
 
   const client = new Enkryptify({
     token,
