@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   getContentTypeMediaType,
   shouldApplySecretSubstitutionToBody,
-} from "@/lib/utils/bodySecretPolicy";
+} from "@/lib/utils/body-secret-policy";
 
 describe("getContentTypeMediaType", () => {
   test("strips parameters and lowercases", () => {

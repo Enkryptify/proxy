@@ -147,6 +147,7 @@ export default class ProxyService {
       if (typeof body !== "string") {
         throw new BadRequestError('bodyEncoding "base64" requires body to be a base64 string');
       }
+      this.#assertValidBase64String(body);
       const buf = Buffer.from(body.replace(/\s+/g, ""), "base64");
       return new Uint8Array(buf);
     }
@@ -158,6 +159,31 @@ export default class ProxyService {
       headers["Content-Type"] = "application/json; charset=utf-8";
     }
     return JSON.stringify(body);
+  }
+
+  /**
+   * Rejects malformed base64 before `Buffer.from` (which can be lenient). Whitespace is stripped;
+   * payload must be standard alphabet with `=` padding only at the end and length multiple of 4.
+   */
+  #assertValidBase64String(body: string): void {
+    const s = body.replace(/\s+/g, "");
+    if (s.length === 0) {
+      return;
+    }
+    if (s.length % 4 !== 0) {
+      throw new BadRequestError("Invalid base64 body");
+    }
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) {
+      throw new BadRequestError("Invalid base64 body");
+    }
+    const withoutPadding = s.replace(/=+$/, "");
+    if (/=/.test(withoutPadding)) {
+      throw new BadRequestError("Invalid base64 body");
+    }
+    const buf = Buffer.from(s, "base64");
+    if (buf.toString("base64") !== s) {
+      throw new BadRequestError("Invalid base64 body");
+    }
   }
 
   /** Header names are case-insensitive; we must not add a second `Content-Type` under another casing. */

@@ -1,16 +1,5 @@
 import { z } from "@hono/zod-openapi";
 
-function isStrictBase64String(body: string): boolean {
-  const s = body.replace(/\s+/g, "");
-  if (s.length === 0) return true;
-  if (s.length % 4 !== 0) return false;
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) return false;
-  const withoutPadding = s.replace(/=+$/, "");
-  if (/=/.test(withoutPadding)) return false;
-  const buf = Buffer.from(s, "base64");
-  return buf.toString("base64") === s;
-}
-
 export const proxyRequestSchema = z.object({
   url: z.url().refine(
     (u) => u.startsWith("http://") || u.startsWith("https://"),
@@ -27,25 +16,6 @@ export const proxyRequestSchema = z.object({
     }),
   /** When set, `body` is base64-decoded to raw bytes before upload (S3, etc.). Secret placeholders are not applied to the body. */
   bodyEncoding: z.enum(["base64"]).optional(),
-}).superRefine((data, ctx) => {
-  if (data.bodyEncoding !== "base64") return;
-
-  if (typeof data.body !== "string") {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["body"],
-      message: 'bodyEncoding "base64" requires body to be a base64 string',
-    });
-    return;
-  }
-
-  if (!isStrictBase64String(data.body)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["body"],
-      message: "Invalid base64 body",
-    });
-  }
 });
 
 export const proxyResponseSchema = z.object({
