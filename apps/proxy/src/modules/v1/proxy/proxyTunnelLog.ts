@@ -2,10 +2,24 @@ import { env } from "@/config/env";
 
 const MAX_ERROR_LEN = 16_000;
 
+let dbPromise: Promise<any> | null = null;
+let tunnelLogPromise: Promise<any> | null = null;
+
+async function getDbAndTunnelLog() {
+  if (!dbPromise) {
+    dbPromise = import("@/plugins/db").then((m) => m.db);
+  }
+  if (!tunnelLogPromise) {
+    tunnelLogPromise = import("@/lib/schemas").then((m) => m.tunnel_log);
+  }
+  const [db, tunnel_log] = await Promise.all([dbPromise, tunnelLogPromise]);
+  return { db, tunnel_log };
+}
+
 function truncateError(message: string): string {
   if (MAX_ERROR_LEN <= 0) return "";
   if (message.length <= MAX_ERROR_LEN) return message;
-  if (MAX_ERROR_LEN === 1) return "…";
+  if (MAX_ERROR_LEN < 2) return "…";
   return `${message.slice(0, Math.max(0, MAX_ERROR_LEN - 1))}…`;
 }
 
@@ -36,8 +50,7 @@ async function insertTunnelLog(
   }
   try {
     const normalizedDurationMs = normalizeDurationMs(base.durationMs);
-    const { db } = await import("@/plugins/db");
-    const { tunnel_log } = await import("@/lib/schemas");
+    const { db, tunnel_log } = await getDbAndTunnelLog();
     await db.insert(tunnel_log).values({
       logId: crypto.randomUUID(),
       workspace: base.workspace,
