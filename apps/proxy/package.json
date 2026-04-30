@@ -8,6 +8,7 @@
     "build": "bun build src/app.ts --outdir dist --target bun",
     "start": "bun run dist/app.js",
     "lint": "oxlint src/",
+    "oxfmt": "oxlint --fix src/",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
