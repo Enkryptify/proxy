@@ -19,8 +19,13 @@ export default class ProxyService {
     const injected = await this.#injectSecrets(request, authorization, workspace, project, environmentId);
     const { resolvedUrl, originalHostname } = await this.#resolveUrl(injected.url);
 
-    const outgoingHeaders = { ...injected.headers, Host: originalHostname };
+    const outgoingHeaders = new Headers(injected.headers);
+    outgoingHeaders.set("Host", originalHostname);
+    // These can become stale after body transformations; let fetch recompute them.
+    outgoingHeaders.delete("content-length");
+    outgoingHeaders.delete("transfer-encoding");
     const hasBody = method !== "GET" && method !== "HEAD" && injected.body !== undefined;
+    const outgoingBody = hasBody ? this.#serializeUpstreamBody(injected.body) : undefined;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -29,7 +34,7 @@ export default class ProxyService {
       const response = await fetch(resolvedUrl, {
         method,
         headers: outgoingHeaders,
-        body: hasBody ? JSON.stringify(injected.body) : undefined,
+        body: outgoingBody,
         signal: controller.signal,
       });
 
@@ -91,6 +96,16 @@ export default class ProxyService {
         error instanceof Error ? error.message : "Invalid target URL",
       );
     }
+  }
+
+  #serializeUpstreamBody(body: unknown): BodyInit {
+    if (typeof body === "string") {
+      return body;
+    }
+    if (body !== null && typeof body === "object") {
+      return JSON.stringify(body);
+    }
+    return JSON.stringify(body);
   }
 
   async #processResponse(response: Response): Promise<ProxyResponse> {

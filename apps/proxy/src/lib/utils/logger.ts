@@ -15,6 +15,18 @@ try {
 const filePath = path.join(logDir, "proxy.log");
 
 const MAX_STRING_LOG_LEN = 2_000;
+const SENSITIVE_KEY_NAMES = new Set([
+  "authorization",
+  "authorizationbearer",
+  "apikey",
+  "api_key",
+  "x-api-key",
+  "client_secret",
+  "password",
+  "auth",
+  "token",
+  "secret",
+]);
 
 function redactSecretsInString(input: string): string {
   let out = input;
@@ -31,7 +43,7 @@ function redactSecretsInString(input: string): string {
   out = out.replace(/%[^%]{2,}%/g, "%[REDACTED]%");
 
   out = out.replace(
-    /\b(token|secret)\b\s*[:=]\s*["']?([A-Za-z0-9\-_.]{10,})["']?/gi,
+    /\b(authorization|authorizationBearer|apiKey|api_key|x-api-key|client_secret|password|auth|token|secret)\b\s*[:=]\s*["']?([A-Za-z0-9\-_.]{10,})["']?/gi,
     (_m, k) => `${k}=[REDACTED]`,
   );
 
@@ -47,24 +59,37 @@ export type ErrorLogMeta = {
   stack?: string;
 };
 
-function redactLogValue(value: any): any {
+function redactLogValue(value: any, seen: WeakSet<object>): any {
   if (typeof value === "string") {
     return redactSecretsInString(value);
   }
   if (Array.isArray(value)) {
-    return value.map((item) => redactLogValue(item));
+    if (seen.has(value)) return value;
+    seen.add(value);
+    for (let i = 0; i < value.length; i += 1) {
+      value[i] = redactLogValue(value[i], seen);
+    }
+    return value;
   }
   if (value !== null && typeof value === "object") {
-    const output: Record<string, any> = {};
+    if (seen.has(value)) return value;
+    seen.add(value);
     for (const [key, nested] of Object.entries(value)) {
-      output[key] = redactLogValue(nested);
+      if (SENSITIVE_KEY_NAMES.has(key.toLowerCase())) {
+        (value as Record<string, any>)[key] = "[REDACTED]";
+        continue;
+      }
+      (value as Record<string, any>)[key] = redactLogValue(nested, seen);
     }
-    return output;
+    return value;
   }
   return value;
 }
 
-const redactionFormat = format((info) => redactLogValue(info))();
+const redactionFormat = format((info) => {
+  redactLogValue(info, new WeakSet<object>());
+  return info;
+})();
 
 const loggerTransports: Array<
   transports.ConsoleTransportInstance | transports.FileTransportInstance
