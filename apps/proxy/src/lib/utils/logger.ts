@@ -63,8 +63,17 @@ function redactLogValue(value: any, seen: WeakSet<object>): any {
   if (typeof value === "string") {
     return redactSecretsInString(value);
   }
+  if (typeof value === "bigint") {
+    return `[BigInt:${String(value)}]`;
+  }
+  if (typeof value === "symbol") {
+    return `[Symbol:${String(value.description ?? "")}]`;
+  }
+  if (typeof value === "function") {
+    return "[Function]";
+  }
   if (Array.isArray(value)) {
-    if (seen.has(value)) return value;
+    if (seen.has(value)) return "[Circular]";
     seen.add(value);
     for (let i = 0; i < value.length; i += 1) {
       value[i] = redactLogValue(value[i], seen);
@@ -72,7 +81,7 @@ function redactLogValue(value: any, seen: WeakSet<object>): any {
     return value;
   }
   if (value !== null && typeof value === "object") {
-    if (seen.has(value)) return value;
+    if (seen.has(value)) return "[Circular]";
     seen.add(value);
     for (const [key, nested] of Object.entries(value)) {
       if (SENSITIVE_KEY_NAMES.has(key.toLowerCase())) {
@@ -99,7 +108,14 @@ const loggerTransports: Array<
       format.colorize(),
       format.timestamp(),
       format.printf(({ level, message, timestamp, ...meta }) => {
-        const metaJson = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : "";
+        let metaJson = "";
+        if (Object.keys(meta).length > 0) {
+          try {
+            metaJson = ` ${JSON.stringify(meta)}`;
+          } catch {
+            metaJson = " [Unserializable metadata]";
+          }
+        }
         return `${timestamp} ${level}: ${message}${metaJson}`;
       }),
     ),
