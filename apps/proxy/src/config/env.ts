@@ -12,7 +12,7 @@ export const env = createEnv({
     DATABASE_LOGGING: z
       .enum(["true", "false"])
       .default("true")
-      .transform((v) => v === "true"),
+      .transform((v) => v === "false"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
