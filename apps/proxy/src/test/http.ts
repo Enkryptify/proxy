@@ -12,9 +12,9 @@ export async function requestHealth(app: OpenAPIHono) {
   return app.request("http://test/health", { method: "GET" });
 }
 
-/** Calls `POST /v1/proxy/ws/proj/{uuid}` with JSON body and Bearer token. */
+/** Calls `POST /ws/proj/{uuid}` with JSON body and Bearer token. */
 export async function requestProxy(app: OpenAPIHono, { body, bearer = "Bearer test-token-ok" }: ProxyPostOptions) {
-  return app.request(`http://test/v1/proxy/ws/proj/${TEST_UUID}`, {
+  return app.request(`http://test/ws/proj/${TEST_UUID}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -11,7 +11,7 @@ function isStrictBase64String(body: string): boolean {
   return buf.toString("base64") === s;
 }
 
-export const proxyRequestSchema = z.object({
+const proxyRequestBaseSchema = z.object({
   url: z.url().refine(
     (u) => u.startsWith("http://") || u.startsWith("https://"),
     { message: "URL must use http:// or https://" },
@@ -27,7 +27,9 @@ export const proxyRequestSchema = z.object({
     }),
   /** When set, `body` is base64-decoded to raw bytes before upload (S3, etc.). Secret placeholders are not applied to the body. */
   bodyEncoding: z.enum(["base64"]).optional(),
-}).superRefine((data, ctx) => {
+});
+
+export const proxyRequestSchema = proxyRequestBaseSchema.superRefine((data, ctx) => {
   if (data.bodyEncoding !== "base64") return;
 
   if (typeof data.body !== "string") {
@@ -69,7 +71,7 @@ export const proxyRequestHeadersSchema = z.object({
 });
 
 /** Input to secret placeholder resolution (proxy body + path + auth). */
-export const injectParamsSchema = proxyRequestSchema
+export const injectParamsSchema = proxyRequestBaseSchema
   .pick({ url: true, headers: true, body: true, bodyEncoding: true })
   .merge(proxyParamsSchema)
   .extend({

@@ -3,7 +3,7 @@ import { app } from "@/app";
 import { requestProxy } from "@/test/http";
 import { installFetchMock, installPublicDnsMock, restoreDnsMock, restoreFetchMock } from "@/test/mockUpstream";
 
-describe("POST /v1/proxy/... (e2e)", () => {
+describe("POST /{workspace}/... (e2e)", () => {
   afterEach(() => {
     restoreDnsMock();
     restoreFetchMock();
@@ -23,7 +23,7 @@ describe("POST /v1/proxy/... (e2e)", () => {
   });
 
   test("rejects invalid Bearer header shape (validation)", async () => {
-    const res = await app.request("http://test/v1/proxy/ws/proj/00000000-0000-4000-8000-000000000001", {
+    const res = await app.request("http://test/ws/proj/00000000-0000-4000-8000-000000000001", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

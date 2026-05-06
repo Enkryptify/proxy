@@ -11,7 +11,7 @@ import { env } from "@/config/env";
 
 const postProxyRoute = createRoute({
   method: "post",
-  path: "/proxy/{workspace}/{project}/{environmentId}",
+  path: "/{workspace}/{project}/{environmentId}",
   tags: ["proxy"],
   request: {
     params: proxyParamsSchema,

@@ -11,8 +11,12 @@ export const env = createEnv({
     DATABASE_URL: z.string(),
     DATABASE_LOGGING: z
       .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+    DATABASE_MIGRATE_ON_START: z
+      .enum(["true", "false"])
       .default("true")
-      .transform((v) => v === "false"),
+      .transform((v) => v === "true"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
