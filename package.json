@@ -6,6 +6,7 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
+    "oxfmt": "oxlint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "turbo db:generate",
@@ -20,6 +21,7 @@
   },
   "packageManager": "bun@1.2.9",
   "dependencies": {
-    "@enkryptify/sdk": "^0.1.2"
+    "@enkryptify/sdk": "^0.1.2",
+    "winston": "^3.19.0"
   }
 }

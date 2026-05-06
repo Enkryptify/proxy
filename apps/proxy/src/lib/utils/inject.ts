@@ -6,8 +6,11 @@ import {
   shouldApplySecretSubstitutionToBody,
 } from "@/lib/utils/bodySecretPolicy";
 
+const PLACEHOLDER_REGEX = /%([^%]+)%/g;
+
 function extractPlaceholders(value: string): string[] {
-  return [...value.matchAll(/%([^%]+)%/g)].map((m) => m[1]!);
+  PLACEHOLDER_REGEX.lastIndex = 0;
+  return [...value.matchAll(PLACEHOLDER_REGEX)].map((m) => m[1]!);
 }
 
 async function resolveSecrets(
@@ -22,7 +25,7 @@ async function resolveSecrets(
       try {
         const value = await client.get(key);
         if (value === null || value === undefined) {
-          throw new BadRequestError(`Secret "${key}" could not be resolved (missing or empty)`);
+          throw new BadRequestError(`Secret "${key}" could not be resolved, it is either missing or empty.`);
         }
         secrets.set(key, String(value));
       } catch (error) {
@@ -40,12 +43,16 @@ async function resolveSecrets(
 }
 
 function replaceInString(value: string, secrets: Map<string, string>): string {
-  return value.replace(new RegExp("%([^%]+)%", "g"), (_, key: string) => {
+  PLACEHOLDER_REGEX.lastIndex = 0;
+  return value.replace(PLACEHOLDER_REGEX, (_, key: string) => {
     return secrets.get(key) ?? `%${key}%`;
   });
 }
 
-function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
+function replaceInObject(
+  obj: InjectParams["body"],
+  secrets: Map<string, string>,
+): InjectResult["body"] {
   if (typeof obj === "string") {
     return replaceInString(obj, secrets);
   }
@@ -53,7 +60,7 @@ function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
     return obj.map((item) => replaceInObject(item, secrets));
   }
   if (obj !== null && typeof obj === "object") {
-    const result: Record<string, unknown> = {};
+    const result: Record<string, InjectResult["body"]> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = replaceInObject(value, secrets);
     }
@@ -113,6 +120,7 @@ export function collectPlaceholderKeysForLogging(params: LoggingParams): string[
   const keysFromBody = applyBody || hasSecretBackedContentType ? extractFromUnknown(params.body) : [];
   return [...new Set([...keysFromUrlAndHeaders, ...keysFromBody])];
 }
+
 export async function injectSecrets(params: InjectParams): Promise<InjectResult> {
   const { url, headers, body, bodyEncoding, workspace, project, environmentId, authorization } =
     params;

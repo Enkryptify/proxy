@@ -47,7 +47,11 @@ export default class ProxyService {
     );
     const { resolvedUrl, originalHostname } = await this.#resolveUrl(injected.url);
 
-    const outgoingHeaders = { ...injected.headers, Host: originalHostname };
+    const outgoingHeaders = new Headers(injected.headers);
+    outgoingHeaders.set("Host", originalHostname);
+    // These can become stale after body transformations; let fetch recompute them.
+    outgoingHeaders.delete("content-length");
+    outgoingHeaders.delete("transfer-encoding");
     const hasBody = method !== "GET" && method !== "HEAD" && injected.body != null;
 
     const controller = new AbortController();
@@ -140,7 +144,7 @@ export default class ProxyService {
    */
   #serializeUpstreamBody(
     body: unknown,
-    headers: Record<string, string>,
+    headers: Headers,
     bodyEncoding: "base64" | undefined,
   ): BodyInit {
     if (bodyEncoding === "base64") {
@@ -154,16 +158,10 @@ export default class ProxyService {
     if (typeof body === "string") {
       return body;
     }
-    if (!this.#hasHeader(headers, "content-type")) {
-      headers["Content-Type"] = "application/json; charset=utf-8";
+    if (!headers.has("content-type")) {
+      headers.set("Content-Type", "application/json; charset=utf-8");
     }
     return JSON.stringify(body);
-  }
-
-  /** Header names are case-insensitive; we must not add a second `Content-Type` under another casing. */
-  #hasHeader(headers: Record<string, string>, name: string): boolean {
-    const lower = name.toLowerCase();
-    return Object.keys(headers).some((k) => k.toLowerCase() === lower);
   }
 
   async #resolveUrl(url: string) {
@@ -182,7 +180,7 @@ export default class ProxyService {
       responseHeaders[key] = value;
     });
 
-    let responseBody: unknown;
+    let responseBody: ProxyResponse["body"];
     const contentType = response.headers.get("content-type") ?? "";
 
     // Note: `text()` decodes as UTF-8. Fine for JSON/XML/text; binary downloads would need arrayBuffer/base64 instead.
