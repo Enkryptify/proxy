@@ -1,5 +1,16 @@
 import { z } from "@hono/zod-openapi";
 
+function isStrictBase64String(body: string): boolean {
+  const s = body.replace(/\s+/g, "");
+  if (s.length === 0) return true;
+  if (s.length % 4 !== 0) return false;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(s)) return false;
+  const withoutPadding = s.replace(/=+$/, "");
+  if (/=/.test(withoutPadding)) return false;
+  const buf = Buffer.from(s, "base64");
+  return buf.toString("base64") === s;
+}
+
 export const proxyRequestSchema = z.object({
   url: z.url().refine(
     (u) => u.startsWith("http://") || u.startsWith("https://"),
@@ -7,7 +18,34 @@ export const proxyRequestSchema = z.object({
   ),
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]),
   headers: z.record(z.string(), z.string()).optional().default({}),
-  body: z.json().optional()
+  body: z
+    .unknown()
+    .optional()
+    .openapi({
+      description:
+        "Forwarded as the upstream request body. Use a string for raw payloads (XML, plain text, preformatted data). Objects and arrays are JSON-encoded; set Content-Type on the request or the proxy adds application/json when missing for non-string bodies.",
+    }),
+  /** When set, `body` is base64-decoded to raw bytes before upload (S3, etc.). Secret placeholders are not applied to the body. */
+  bodyEncoding: z.enum(["base64"]).optional(),
+}).superRefine((data, ctx) => {
+  if (data.bodyEncoding !== "base64") return;
+
+  if (typeof data.body !== "string") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["body"],
+      message: 'bodyEncoding "base64" requires body to be a base64 string',
+    });
+    return;
+  }
+
+  if (!isStrictBase64String(data.body)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["body"],
+      message: "Invalid base64 body",
+    });
+  }
 });
 
 export const proxyResponseSchema = z.object({
@@ -32,7 +70,7 @@ export const proxyRequestHeadersSchema = z.object({
 
 /** Input to secret placeholder resolution (proxy body + path + auth). */
 export const injectParamsSchema = proxyRequestSchema
-  .pick({ url: true, headers: true, body: true })
+  .pick({ url: true, headers: true, body: true, bodyEncoding: true })
   .merge(proxyParamsSchema)
   .extend({
     authorization: proxyRequestHeadersSchema.shape.authorization,
