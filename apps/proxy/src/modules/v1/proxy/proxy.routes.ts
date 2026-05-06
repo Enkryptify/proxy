@@ -2,7 +2,12 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createRoute } from "@hono/zod-openapi";
 import { proxyRequestSchema, proxyParamsSchema, proxyRequestHeadersSchema, proxyResponseSchema, proxyErrorSchema } from "./proxy.schemas";
 import { jsonContent, jsonBody } from "@/lib/utils/openapi";
+import { collectPlaceholderKeysForLogging } from "@/lib/utils/inject";
+import { safeTargetHostFromUrl } from "@/lib/utils/safeTargetHost";
+import { HttpError } from "@/lib/utils/errors";
 import ProxyService from "./proxy.service";
+import { insertTunnelLogFailure, insertTunnelLogSuccess } from "./proxyTunnelLog";
+import { env } from "@/config/env";
 
 const postProxyRoute = createRoute({
   method: "post",
@@ -30,7 +35,45 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
     const { workspace, project, environmentId } = context.req.valid("param");
     const request = context.req.valid("json");
 
-    const result = await service.forward(request, authorization, workspace, project, environmentId);
-    return context.json(result, 200);
+    const started = performance.now();
+    const targetHost = safeTargetHostFromUrl(request.url);
+
+    let placeholderKeys: string[] = [];
+    if (env.DATABASE_LOGGING) {
+      try {
+        placeholderKeys = collectPlaceholderKeysForLogging({
+          url: request.url,
+          headers: request.headers,
+          body: request.body,
+          bodyEncoding: request.bodyEncoding,
+        });
+      } catch {
+        if (process.env.NODE_ENV !== "test") {
+          console.warn("[proxy] placeholder key extraction failed");
+        }
+        placeholderKeys = [];
+      }
+    }
+
+    const logBase = {
+      workspace,
+      project,
+      environmentId,
+      targetHost,
+      placeholderKeys,
+    };
+
+    try {
+      const result = await service.forward(request, authorization, workspace, project, environmentId);
+      const durationMs = Math.round(performance.now() - started);
+      void insertTunnelLogSuccess({ ...logBase, durationMs }, result.status).catch(() => {});
+      return context.json(result, 200);
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - started);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const statusCode = error instanceof HttpError ? error.status : 500;
+      void insertTunnelLogFailure({ ...logBase, durationMs }, statusCode, message).catch(() => {});
+      throw error;
+    }
   });
 }

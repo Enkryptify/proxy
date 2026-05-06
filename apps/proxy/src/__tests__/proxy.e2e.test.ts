@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { app } from "@/app";
 import { requestProxy } from "@/test/http";
-import { installFetchMock, installPublicDnsMock, restoreDnsMock, restoreFetchMock } from "@/test/mock-upstream";
+import { installFetchMock, installPublicDnsMock, restoreDnsMock, restoreFetchMock } from "@/test/mockUpstream";
 
 describe("POST /v1/proxy/... (e2e)", () => {
   afterEach(() => {

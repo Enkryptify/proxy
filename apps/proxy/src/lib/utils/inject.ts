@@ -107,6 +107,34 @@ function extractFromUnknown(value: unknown): string[] {
   return [];
 }
 
+type LoggingParams = Pick<InjectParams, "url" | "headers" | "body" | "bodyEncoding">;
+
+/**
+ * Unique `%KEY%` names present in the request (for audit). Aligns with inject rules: body is not
+ * scanned when `bodyEncoding` is base64 or when Content-Type disallows text substitution (raw headers).
+ */
+export function collectPlaceholderKeysForLogging(params: LoggingParams): string[] {
+  const keysFromUrlAndHeaders = collectAllPlaceholders(params.url, params.headers, params.body, false);
+  if (params.bodyEncoding === "base64") {
+    return [...new Set(keysFromUrlAndHeaders)];
+  }
+  const mediaType = getContentTypeMediaType(params.headers);
+  const contentTypeHeader = Object.entries(params.headers).find(
+    ([key]) => key.toLowerCase() === "content-type",
+  )?.[1];
+  const hasSecretBackedContentType =
+    typeof contentTypeHeader === "string" && extractPlaceholders(contentTypeHeader).length > 0;
+  const applyBody = shouldApplySecretSubstitutionToBody(
+    mediaType,
+    params.bodyEncoding,
+    params.body,
+  );
+  // If Content-Type itself is secret-backed, media type can't be derived here; include body keys
+  // conservatively so audit logs don't miss referenced placeholders.
+  const keysFromBody = applyBody || hasSecretBackedContentType ? extractFromUnknown(params.body) : [];
+  return [...new Set([...keysFromUrlAndHeaders, ...keysFromBody])];
+}
+
 export async function injectSecrets(params: InjectParams): Promise<InjectResult> {
   const { url, headers, body, bodyEncoding, workspace, project, environmentId, authorization } =
     params;

@@ -106,7 +106,7 @@ export default class ProxyService {
       if (!(error instanceof EnkryptifyError)) throw error;
 
       if (error instanceof AuthenticationError) {
-        throw new UnauthorizedError("Invalid or expired token");
+        throw new UnauthorizedError("Invalid or expired token, we can't connect to Enkryptify");
       }
       if (error instanceof AuthorizationError) {
         throw new ForbiddenError("Insufficient permissions for the requested secrets");
