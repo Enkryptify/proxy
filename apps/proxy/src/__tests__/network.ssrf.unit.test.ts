@@ -14,4 +14,12 @@ describe("assertExternalUrl (SSRF security)", () => {
   test("rejects loopback IPv4", async () => {
     await expect(assertExternalUrl("http://127.0.0.1/")).rejects.toThrow(/private|localhost/i);
   });
+
+  test("rejects loopback IPv6", async () => {
+    await expect(assertExternalUrl("http://[::1]/")).rejects.toThrow(/private|localhost/i);
+  });
+
+  test("rejects unique-local IPv6", async () => {
+    await expect(assertExternalUrl("http://[fc00::1]/")).rejects.toThrow(/private|localhost/i);
+  });
 });

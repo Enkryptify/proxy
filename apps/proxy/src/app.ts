@@ -13,7 +13,18 @@ app.onError(errorHandler);
 
 registerModules(app);
 
-await initDb();
+let appInitPromise: Promise<void> | null = null;
+
+export async function initAppWithDb(): Promise<void> {
+  if (!appInitPromise) {
+    appInitPromise = initDb().catch((err) => {
+      appInitPromise = null;
+      throw err;
+    });
+  }
+
+  await appInitPromise;
+}
 
 export { app };
 export default {

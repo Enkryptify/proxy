@@ -5,7 +5,9 @@ let savedFetch: typeof fetch | undefined;
 
 /** Forces `example.com` to resolve to a public IP so SSRF checks pass in tests. */
 export function installPublicDnsMock(publicIp = "93.184.216.34"): void {
-  savedLookup = Bun.dns.lookup;
+  if (savedLookup === undefined) {
+    savedLookup = Bun.dns.lookup;
+  }
   Bun.dns.lookup = async (hostname: string, options?: Parameters<LookupFn>[1]) => {
     if (hostname === "example.com") {
       return [{ address: publicIp, family: 4, ttl: 60 }] as Awaited<ReturnType<LookupFn>>;
@@ -25,7 +27,9 @@ export function restoreDnsMock(): void {
 export function installFetchMock(
   handler: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> | Response,
 ): void {
-  savedFetch = globalThis.fetch;
+  if (savedFetch === undefined) {
+    savedFetch = globalThis.fetch;
+  }
   globalThis.fetch = handler as typeof fetch;
 }
 
