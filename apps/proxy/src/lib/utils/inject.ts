@@ -1,20 +1,10 @@
-/**
- * Secret injection: finds `%SECRET_NAME%` in the outgoing URL, headers, and (when safe) body,
- * resolves values via Enkryptify, then substitutes. Binary or non-text bodies skip body substitution
- * so bytes are never interpreted as UTF-8 text (see body-secret-policy.ts).
- *
- * Flow: resolve placeholders in URL and headers first, derive Content-Type from the *substituted*
- * headers, then decide whether the body may contain placeholders (text/JSON/XML only). Otherwise a
- * placeholder only in `Content-Type` would be misclassified.
- */
-
 import Enkryptify, { EnkryptifyError } from "@enkryptify/sdk";
 import type { InjectParams, InjectResult } from "@/modules/v1/proxy/proxy.schemas";
 import { BadRequestError } from "@/lib/utils/errors";
 import {
   getContentTypeMediaType,
   shouldApplySecretSubstitutionToBody,
-} from "@/lib/utils/body-secret-policy";
+} from "@/lib/utils/bodySecretPolicy";
 
 function extractPlaceholders(value: string): string[] {
   return [...value.matchAll(/%([^%]+)%/g)].map((m) => m[1]!);
@@ -49,7 +39,6 @@ async function resolveSecrets(
   return secrets;
 }
 
-/** Replaces every `%key%` where `secrets` has `key`; unknown keys stay as `%key%`. */
 function replaceInString(value: string, secrets: Map<string, string>): string {
   return value.replace(new RegExp("%([^%]+)%", "g"), (_, key: string) => {
     return secrets.get(key) ?? `%${key}%`;
@@ -73,10 +62,6 @@ function replaceInObject(obj: unknown, secrets: Map<string, string>): unknown {
   return obj;
 }
 
-/**
- * Collects placeholder names. URL and headers are always scanned.
- * `includeBody` is false for binary / unsafe Content-Types so we never read `%...%` inside raw bytes.
- */
 function collectAllPlaceholders(
   url: string,
   headers: Record<string, string>,
@@ -109,10 +94,6 @@ function extractFromUnknown(value: unknown): string[] {
 
 type LoggingParams = Pick<InjectParams, "url" | "headers" | "body" | "bodyEncoding">;
 
-/**
- * Unique `%KEY%` names present in the request (for audit). Aligns with inject rules: body is not
- * scanned when `bodyEncoding` is base64 or when Content-Type disallows text substitution (raw headers).
- */
 export function collectPlaceholderKeysForLogging(params: LoggingParams): string[] {
   const keysFromUrlAndHeaders = collectAllPlaceholders(params.url, params.headers, params.body, false);
   if (params.bodyEncoding === "base64") {
@@ -129,12 +110,9 @@ export function collectPlaceholderKeysForLogging(params: LoggingParams): string[
     params.bodyEncoding,
     params.body,
   );
-  // If Content-Type itself is secret-backed, media type can't be derived here; include body keys
-  // conservatively so audit logs don't miss referenced placeholders.
   const keysFromBody = applyBody || hasSecretBackedContentType ? extractFromUnknown(params.body) : [];
   return [...new Set([...keysFromUrlAndHeaders, ...keysFromBody])];
 }
-
 export async function injectSecrets(params: InjectParams): Promise<InjectResult> {
   const { url, headers, body, bodyEncoding, workspace, project, environmentId, authorization } =
     params;
