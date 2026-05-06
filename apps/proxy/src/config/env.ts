@@ -9,6 +9,10 @@ export const env = createEnv({
       .transform((value) => parseInt(value, 10))
       .pipe(z.number()),
     DATABASE_URL: z.string(),
+    DATABASE_LOGGING: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((v) => v === "false"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

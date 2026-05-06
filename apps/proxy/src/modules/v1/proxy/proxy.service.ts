@@ -1,46 +1,194 @@
 import type { ProxyRequest, ProxyResponse } from "./proxy.schemas";
 import { assertExternalUrl } from "@/lib/utils/network";
+import { injectSecrets } from "@/lib/utils/inject";
+import {
+  BadRequestError,
+  BadGatewayError,
+  ForbiddenError,
+  HttpError,
+  NotFoundError,
+  TooManyRequestsError,
+  UnauthorizedError,
+} from "@/lib/utils/errors";
+import {
+  ApiError,
+  AuthenticationError,
+  AuthorizationError,
+  EnkryptifyError,
+  NotFoundError as SdkResourceNotFoundError,
+  RateLimitError,
+  SecretNotFoundError,
+} from "@enkryptify/sdk";
 
 const FETCH_TIMEOUT_MS = 30_000;
 
 export default class ProxyService {
-  async forward(request: ProxyRequest): Promise<ProxyResponse> {
-    const { url, method, headers, body } = request;
+  /**
+   * 1) Resolve `%...%` in URL/headers/body (body only when Content-Type is text-safe — see inject).
+   * 2) SSRF-check and pin DNS to the resolved IP for `fetch`.
+   * 3) Serialize body (JSON string, raw string, or base64 → bytes).
+   * 4) Return upstream status/headers/body (response body is read as text today; binary responses stay UTF-8–safe only if text).
+   */
+  async forward(
+    request: ProxyRequest,
+    authorization: string,
+    workspace: string,
+    project: string,
+    environmentId: string,
+  ): Promise<ProxyResponse> {
+    const { method } = request;
 
-    const { resolvedUrl, originalHostname } = await assertExternalUrl(url);
+    const injected = await this.#injectSecrets(
+      request,
+      authorization,
+      workspace,
+      project,
+      environmentId,
+    );
+    const { resolvedUrl, originalHostname } = await this.#resolveUrl(injected.url);
 
-    const outgoingHeaders = { ...headers, Host: originalHostname };
-    const hasBody = method !== "GET" && method !== "HEAD" && body !== undefined;
+    const outgoingHeaders = new Headers(injected.headers);
+    outgoingHeaders.set("Host", originalHostname);
+    // These can become stale after body transformations; let fetch recompute them.
+    outgoingHeaders.delete("content-length");
+    outgoingHeaders.delete("transfer-encoding");
+    const hasBody = method !== "GET" && method !== "HEAD" && injected.body != null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
+      const bodyPayload = hasBody
+        ? this.#serializeUpstreamBody(injected.body, outgoingHeaders, request.bodyEncoding)
+        : undefined;
+
       const response = await fetch(resolvedUrl, {
         method,
         headers: outgoingHeaders,
-        body: hasBody ? JSON.stringify(body) : undefined,
+        body: bodyPayload,
         signal: controller.signal,
       });
 
       return this.#processResponse(response);
+    } catch (error) {
+      // Serialization / validation errors must not be turned into generic upstream 502s.
+      if (error instanceof HttpError) {
+        throw error;
+      }
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new BadGatewayError("Target endpoint timed out");
+      }
+      if (error instanceof TypeError) {
+        throw new BadGatewayError("Failed to connect to target endpoint");
+      }
+      throw new BadGatewayError("Failed to reach target endpoint");
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  async #processResponse(response: Response) {
+  /** Maps Enkryptify SDK errors to HTTP errors for consistent JSON error responses. */
+  async #injectSecrets(
+    request: ProxyRequest,
+    authorization: string,
+    workspace: string,
+    project: string,
+    environmentId: string,
+  ) {
+    try {
+      return await injectSecrets({
+        url: request.url,
+        headers: request.headers,
+        body: request.body,
+        bodyEncoding: request.bodyEncoding,
+        workspace,
+        project,
+        environmentId,
+        authorization,
+      });
+    } catch (error) {
+      if (!(error instanceof EnkryptifyError)) throw error;
+
+      if (error instanceof AuthenticationError) {
+        throw new UnauthorizedError("Invalid or expired token, we can't connect to Enkryptify");
+      }
+      if (error instanceof AuthorizationError) {
+        throw new ForbiddenError("Insufficient permissions for the requested secrets");
+      }
+      if (error instanceof SecretNotFoundError) {
+        throw new BadRequestError(error.message);
+      }
+      if (error instanceof RateLimitError) {
+        throw new TooManyRequestsError("Secret retrieval rate limited", error.retryAfter);
+      }
+      // HTTP 404 from Enkryptify API (wrong workspace/project/environment path), not "secret key missing".
+      if (error instanceof SdkResourceNotFoundError) {
+        throw new NotFoundError(error.message);
+      }
+      // Other non-OK API responses (e.g. 5xx) — was previously lumped into generic "Secret provider unavailable".
+      if (error instanceof ApiError) {
+        if (error.status >= 500) {
+          throw new BadGatewayError(error.message);
+        }
+        throw new BadRequestError(error.message);
+      }
+      throw new BadGatewayError("Secret provider unavailable");
+    }
+  }
+
+  /**
+   * Turns the validated JSON `body` field into what `fetch` accepts.
+   * - `base64`: decode to `Uint8Array` so binary (S3, images) is not passed through `JSON.stringify` or UTF-8 string paths.
+   * - `string`: sent as-is (XML, plain text, etc.); caller should set `Content-Type`.
+   * - object/array/…: `JSON.stringify`; default `Content-Type` only when missing.
+   */
+  #serializeUpstreamBody(
+    body: unknown,
+    headers: Headers,
+    bodyEncoding: "base64" | undefined,
+  ): BodyInit {
+    if (bodyEncoding === "base64") {
+      if (typeof body !== "string") {
+        throw new BadRequestError('bodyEncoding "base64" requires body to be a base64 string');
+      }
+      const buf = Buffer.from(body.replace(/\s+/g, ""), "base64");
+      return new Uint8Array(buf);
+    }
+
+    if (typeof body === "string") {
+      return body;
+    }
+    if (!headers.has("content-type")) {
+      headers.set("Content-Type", "application/json; charset=utf-8");
+    }
+    return JSON.stringify(body);
+  }
+
+  async #resolveUrl(url: string) {
+    try {
+      return await assertExternalUrl(url);
+    } catch (error) {
+      throw new BadRequestError(
+        error instanceof Error ? error.message : "Invalid target URL",
+      );
+    }
+  }
+
+  async #processResponse(response: Response): Promise<ProxyResponse> {
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
     });
 
-    let responseBody: unknown;
+    let responseBody: ProxyResponse["body"];
     const contentType = response.headers.get("content-type") ?? "";
 
+    // Note: `text()` decodes as UTF-8. Fine for JSON/XML/text; binary downloads would need arrayBuffer/base64 instead.
     const text = await response.text();
 
-    if (contentType.includes("application/json")) {
+    const isJson =
+      contentType.includes("application/json") || /\bjson\b/i.test(contentType);
+    if (isJson) {
       try {
         responseBody = JSON.parse(text);
       } catch {
