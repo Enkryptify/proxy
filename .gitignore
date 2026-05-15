@@ -6,3 +6,10 @@ dist
 .env.*
 !.env.example
 .DS_Store
+
+# Terraform local/runtime files. Commit *.tf, *.tfvars.example, and .terraform.lock.hcl.
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/*.tfvars
+!**/*.tfvars.example
