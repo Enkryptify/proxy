@@ -1,3 +1,4 @@
 public/
+api/
 .vercel
 .env*
