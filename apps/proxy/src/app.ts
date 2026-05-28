@@ -27,6 +27,3 @@ export async function initAppWithDb(): Promise<void> {
 }
 
 export { app };
-export default {
-  fetch: app.fetch,
-};

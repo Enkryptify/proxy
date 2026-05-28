@@ -4,15 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run --hot src/server.ts",
-    "build": "bun build src/server.ts --outdir dist --target bun",
-    "start": "bun run dist/server.js",
+    "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build:vercel": "bun build src/index.ts --outfile api/index.js --target bun --minify",
+    "start": "bun run dist/index.js",
     "lint": "oxlint src/",
     "oxfmt": "oxlint --fix src/",
     "test": "bun test src/__tests__",
     "test:watch": "bun test --watch src/__tests__",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "deploy:vercel": "bun run build:vercel && bunx vercel deploy --prod --yes"
   },
   "dependencies": {
     "@enkryptify/sdk": "^0.1.2",
@@ -22,6 +24,7 @@
     "drizzle-orm": "latest",
     "hono": "latest",
     "postgres": "latest",
+    "winston": "^3.19.0",
     "zod": "latest"
   },
   "devDependencies": {

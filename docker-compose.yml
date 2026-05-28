@@ -1,0 +1,14 @@
+services:
+  proxy-api:
+    build:
+      context: .
+      dockerfile: apps/proxy/Dockerfile
+    image: proxy-api:local
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+    environment:
+      PORT: "${PORT:-3000}"
+      DATABASE_LOGGING: ${DATABASE_LOGGING:-true}
+      DATABASE_MIGRATE_ON_START: ${DATABASE_MIGRATE_ON_START:-true}
+      DATABASE_URL: ${DATABASE_URL}
+    restart: unless-stopped

@@ -6,13 +6,18 @@ export const env = createEnv({
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z
       .string()
+      .default("3000")
       .transform((value) => parseInt(value, 10))
       .pipe(z.number()),
-    DATABASE_URL: z.string(),
+    DATABASE_URL: z.string().optional(),
     DATABASE_LOGGING: z
       .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+    DATABASE_MIGRATE_ON_START: z
+      .enum(["true", "false"])
       .default("true")
-      .transform((v) => v === "false"),
+      .transform((v) => v === "true"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
