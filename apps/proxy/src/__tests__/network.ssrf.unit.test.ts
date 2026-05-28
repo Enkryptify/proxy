@@ -1,7 +1,11 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { assertExternalUrl } from "@/lib/utils/network";
+import { installPublicDnsMock, restoreDnsMock } from "@/test/mockUpstream";
 
 describe("assertExternalUrl (SSRF security)", () => {
+  afterEach(() => {
+    restoreDnsMock();
+  });
   test("rejects localhost hostname without DNS", async () => {
     await expect(assertExternalUrl("http://localhost:3000/api")).rejects.toThrow(/localhost/i);
   });
@@ -21,5 +25,14 @@ describe("assertExternalUrl (SSRF security)", () => {
 
   test("rejects unique-local IPv6", async () => {
     await expect(assertExternalUrl("http://[fc00::1]/")).rejects.toThrow(/private|localhost/i);
+  });
+
+  test("keeps hostname for HTTPS after SSRF validation (TLS/SNI)", async () => {
+    installPublicDnsMock();
+    const { resolvedUrl, originalHostname } = await assertExternalUrl(
+      "https://example.com/path?x=1",
+    );
+    expect(resolvedUrl).toBe("https://example.com/path?x=1");
+    expect(originalHostname).toBe("example.com");
   });
 });

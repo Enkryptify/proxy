@@ -33,7 +33,7 @@ async function insertTunnelLog(
   outcome: "success" | "failure",
   errorMessage: string | null,
 ): Promise<void> {
-  if (!env.DATABASE_LOGGING) {
+  if (!env.DATABASE_LOGGING || !db) {
     return;
   }
   try {

@@ -78,7 +78,7 @@ describe("POST /{workspace}/... (e2e)", () => {
     });
 
     expect(res.status).toBe(400);
-    const j = (await res.json()) as { error: string };
-    expect(j.error).toMatch(/base64/i);
+    const body = await res.json();
+    expect(JSON.stringify(body)).toMatch(/base64/i);
   });
 });

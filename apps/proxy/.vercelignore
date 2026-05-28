@@ -1,0 +1,8 @@
+src/__tests__
+src/test
+logs
+drizzle
+Dockerfile
+bunfig.toml
+.turbo
+dist

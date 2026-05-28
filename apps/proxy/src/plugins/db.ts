@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import fs from "node:fs";
@@ -6,13 +7,19 @@ import path from "node:path";
 import { env } from "@/config/env";
 import * as schema from "@/lib/schemas";
 
-const client = postgres(env.DATABASE_URL);
+const client = env.DATABASE_URL ? postgres(env.DATABASE_URL) : null;
 
-export const db = drizzle(client, { schema });
+export const db: PostgresJsDatabase<typeof schema> | null = client
+  ? drizzle(client, { schema })
+  : null;
 
 let dbInitPromise: Promise<void> | null = null;
 
 export async function initDb(): Promise<void> {
+  if (!client || !db) {
+    return;
+  }
+
   if (!dbInitPromise) {
     dbInitPromise = client`select 1`
       .then(async () => {
