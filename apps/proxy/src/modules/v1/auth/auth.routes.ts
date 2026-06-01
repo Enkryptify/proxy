@@ -116,9 +116,12 @@ export function registerAuthRoutes(app: OpenAPIHono, service: AuthService) {
 
   app.openapi(logoutRoute, async (c) => {
     const raw = getCookie(c, REFRESH_COOKIE_NAME);
-    await service.logout(raw);
-    deleteCookie(c, REFRESH_COOKIE_NAME, { path: "/api/auth" });
-    return c.json({ ok: true as const }, 200);
+    try {
+      await service.logout(raw);
+      return c.json({ ok: true as const }, 200);
+    } finally {
+      deleteCookie(c, REFRESH_COOKIE_NAME, { path: "/api/auth" });
+    }
   });
 
   app.use("/api/auth/me", requireAdmin);
