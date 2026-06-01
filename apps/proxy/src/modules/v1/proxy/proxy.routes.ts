@@ -4,9 +4,10 @@ import { proxyRequestSchema, proxyParamsSchema, proxyRequestHeadersSchema, proxy
 import { jsonContent, jsonBody } from "@/lib/utils/openapi";
 import { collectPlaceholderKeysForLogging } from "@/lib/utils/inject";
 import { safeTargetHostFromUrl } from "@/lib/utils/safeTargetHost";
-import { HttpError } from "@/lib/utils/errors";
+import { ForbiddenError, HttpError } from "@/lib/utils/errors";
 import ProxyService from "./proxy.service";
 import { insertTunnelLogFailure, insertTunnelLogSuccess } from "./proxyTunnelLog";
+import { assertWhitelistAllows } from "./proxyWhitelistGuard";
 import { env } from "@/config/env";
 
 const postProxyRoute = createRoute({
@@ -22,7 +23,7 @@ const postProxyRoute = createRoute({
     200: jsonContent(proxyResponseSchema, "Proxied response from the target endpoint"),
     400: jsonContent(proxyErrorSchema, "Invalid request or target URL"),
     401: jsonContent(proxyErrorSchema, "Invalid or expired authentication token"),
-    403: jsonContent(proxyErrorSchema, "Insufficient permissions"),
+    403: jsonContent(proxyErrorSchema, "Insufficient permissions or host blocked by whitelist"),
     404: jsonContent(proxyErrorSchema, "Workspace, project, or environment not found in Enkryptify"),
     429: jsonContent(proxyErrorSchema, "Rate limited"),
     502: jsonContent(proxyErrorSchema, "Target endpoint unreachable or secret provider unavailable"),
@@ -64,6 +65,7 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
     };
 
     try {
+      await assertWhitelistAllows(workspace, targetHost);
       const result = await service.forward(request, authorization, workspace, project, environmentId);
       const durationMs = Math.round(performance.now() - started);
       void insertTunnelLogSuccess({ ...logBase, durationMs }, result.status).catch(() => {});
@@ -73,6 +75,7 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
       const message = error instanceof Error ? error.message : "Unknown error";
       const statusCode = error instanceof HttpError ? error.status : 500;
       void insertTunnelLogFailure({ ...logBase, durationMs }, statusCode, message).catch(() => {});
+      if (error instanceof ForbiddenError || error instanceof HttpError) throw error;
       throw error;
     }
   });
