@@ -12,7 +12,9 @@ import { user } from "@/lib/schemas";
 
 function arg(name: string): string | undefined {
   const idx = process.argv.indexOf(`--${name}`);
-  return idx >= 0 ? process.argv[idx + 1] : undefined;
+  if (idx < 0) return undefined;
+  const value = process.argv[idx + 1];
+  return value && !value.startsWith("--") ? value : undefined;
 }
 
 async function main() {
