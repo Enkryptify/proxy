@@ -40,7 +40,7 @@ async function insertTunnelLog(
     const normalizedDurationMs = normalizeDurationMs(base.durationMs);
     await db.insert(tunnel_log).values({
       logId: crypto.randomUUID(),
-      workspace: base.workspace,
+      workspaceId: base.workspace,
       project: base.project,
       environmentId: base.environmentId,
       link: base.targetHost,

@@ -24,7 +24,7 @@ export default class AdminService {
     const since = new Date(Date.now() - input.windowHours * 60 * 60 * 1000);
 
     const filter = input.workspace
-      ? and(gte(tunnel_log.createdAt, since), eq(tunnel_log.workspace, input.workspace))
+      ? and(gte(tunnel_log.createdAt, since), eq(tunnel_log.workspaceId, input.workspace))
       : gte(tunnel_log.createdAt, since);
 
     const rows = await database
@@ -53,7 +53,7 @@ export default class AdminService {
 
   async listLogs(input: { page: number; pageSize: number; workspace?: string }): Promise<LogsResponse> {
     const database = assertDb();
-    const filter = input.workspace ? eq(tunnel_log.workspace, input.workspace) : undefined;
+    const filter = input.workspace ? eq(tunnel_log.workspaceId, input.workspace) : undefined;
 
     const [totalRow] = await database
       .select({ total: count() })
@@ -64,7 +64,7 @@ export default class AdminService {
       .select({
         id: tunnel_log.id,
         createdAt: tunnel_log.createdAt,
-        workspace: tunnel_log.workspace,
+        workspaceId: tunnel_log.workspaceId,
         project: tunnel_log.project,
         environmentId: tunnel_log.environmentId,
         targetHost: tunnel_log.link,
@@ -83,7 +83,7 @@ export default class AdminService {
       items: items.map((it) => ({
         id: it.id,
         createdAt: it.createdAt.toISOString(),
-        workspace: it.workspace,
+        workspace: it.workspaceId,
         project: it.project,
         environmentId: it.environmentId,
         targetHost: it.targetHost,
@@ -103,7 +103,7 @@ export default class AdminService {
     const rows = await database
       .select()
       .from(whitelist_host)
-      .where(eq(whitelist_host.workspace, workspace))
+      .where(eq(whitelist_host.workspaceId, workspace))
       .orderBy(whitelist_host.hostname);
 
     const settings = await this.getSettings(workspace);
@@ -111,7 +111,7 @@ export default class AdminService {
     return {
       items: rows.map((row) => ({
         id: row.id,
-        workspace: row.workspace,
+        workspace: row.workspaceId,
         hostname: row.hostname,
         addedBy: row.addedBy ?? null,
         createdAt: row.createdAt.toISOString(),
@@ -130,19 +130,19 @@ export default class AdminService {
     const [row] = await database
       .insert(whitelist_host)
       .values({
-        workspace: input.workspace,
+        workspaceId: input.workspace,
         hostname: input.hostname,
         addedBy: input.addedBy,
       })
       .onConflictDoNothing({
-        target: [whitelist_host.workspace, whitelist_host.hostname],
+        target: [whitelist_host.workspaceId, whitelist_host.hostname],
       })
       .returning();
 
     if (row) {
       return {
         id: row.id,
-        workspace: row.workspace,
+        workspace: row.workspaceId,
         hostname: row.hostname,
         addedBy: row.addedBy ?? null,
         createdAt: row.createdAt.toISOString(),
@@ -151,7 +151,7 @@ export default class AdminService {
 
     const existing = await database.query.whitelist_host.findFirst({
       where: and(
-        eq(whitelist_host.workspace, input.workspace),
+        eq(whitelist_host.workspaceId, input.workspace),
         eq(whitelist_host.hostname, input.hostname),
       ),
     });
@@ -160,7 +160,7 @@ export default class AdminService {
     }
     return {
       id: existing.id,
-      workspace: existing.workspace,
+      workspace: existing.workspaceId,
       hostname: existing.hostname,
       addedBy: existing.addedBy ?? null,
       createdAt: existing.createdAt.toISOString(),
@@ -181,7 +181,7 @@ export default class AdminService {
   async getSettings(workspace: string): Promise<SettingsResponse> {
     const database = assertDb();
     const row = await database.query.workspace_settings.findFirst({
-      where: eq(workspace_settings.workspace, workspace),
+      where: eq(workspace_settings.workspaceId, workspace),
     });
     return {
       workspace,
@@ -193,9 +193,9 @@ export default class AdminService {
     const database = assertDb();
     await database
       .insert(workspace_settings)
-      .values({ workspace, whitelistMode })
+      .values({ workspaceId: workspace, whitelistMode })
       .onConflictDoUpdate({
-        target: workspace_settings.workspace,
+        target: workspace_settings.workspaceId,
         set: { whitelistMode, updatedAt: new Date() },
       });
     return { workspace, whitelistMode };
