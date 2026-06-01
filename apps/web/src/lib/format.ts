@@ -20,12 +20,15 @@ export function formatDuration(ms: number): string {
 
 export function formatDateTime(input: string | Date): string {
   const d = typeof input === "string" ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return "—";
   return dateTimeFormatter.format(d);
 }
 
 export function formatRelative(input: string | Date): string {
   const d = typeof input === "string" ? new Date(input) : input;
-  const diffMs = Date.now() - d.getTime();
+  const ts = d.getTime();
+  if (Number.isNaN(ts)) return "—";
+  const diffMs = Math.max(0, Date.now() - ts);
   const sec = Math.floor(diffMs / 1000);
   if (sec < 60) return `${sec}s ago`;
   const min = Math.floor(sec / 60);
