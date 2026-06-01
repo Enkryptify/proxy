@@ -4,7 +4,8 @@ import { index, integer, jsonb, text, uuid, varchar } from "drizzle-orm/pg-core"
 export const tunnel_log = createTable("tunnel_log", {
   ...baseModel,
   logId: uuid("log_id").notNull().unique(),
-  workspace: varchar("workspace", { length: 255 }).notNull(),
+  /** Stable workspace identifier from the Enkryptify vault (see `PROXY_KEY`). */
+  workspaceId: varchar("workspace_id", { length: 255 }).notNull(),
   project: varchar("project", { length: 255 }).notNull(),
   environmentId: uuid("environment_id").notNull(),
   /** Hostname only (e.g. api.example.com) — never full URLs with paths or query strings (secrets). */
@@ -18,18 +19,18 @@ export const tunnel_log = createTable("tunnel_log", {
   placeholderKeys: jsonb("placeholder_keys").$type<string[]>(),
 }, (table) => [
   index("tunnel_log_ws_proj_env_created_at_idx").on(
-    table.workspace,
+    table.workspaceId,
     table.project,
     table.environmentId,
     table.createdAt,
   ),
   index("tunnel_log_ws_env_created_at_idx").on(
-    table.workspace,
+    table.workspaceId,
     table.environmentId,
     table.createdAt,
   ),
   index("tunnel_log_ws_proj_env_status_created_at_idx").on(
-    table.workspace,
+    table.workspaceId,
     table.project,
     table.environmentId,
     table.statusCode,
