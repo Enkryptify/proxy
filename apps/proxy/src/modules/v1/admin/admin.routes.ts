@@ -3,11 +3,11 @@ import { createRoute } from "@hono/zod-openapi";
 import { z } from "@hono/zod-openapi";
 import { jsonBody, jsonContent } from "@/lib/utils/openapi";
 import { requireAdmin } from "@/lib/middleware/requireAdmin";
+import { getProxyWorkspace } from "@/lib/proxyIdentity";
 import {
   adminErrorSchema,
   logsQuerySchema,
   logsResponseSchema,
-  settingsParamsSchema,
   settingsResponseSchema,
   settingsUpdateBodySchema,
   statsQuerySchema,
@@ -16,9 +16,22 @@ import {
   whitelistEntrySchema,
   whitelistIdParamsSchema,
   whitelistListResponseSchema,
-  workspaceQuerySchema,
+  workspaceIdentityResponseSchema,
 } from "./admin.schemas";
 import type AdminService from "./admin.service";
+
+const workspaceIdentityRoute = createRoute({
+  method: "get",
+  path: "/api/admin/me/workspace",
+  tags: ["admin"],
+  security: [{ bearerAuth: [] }],
+  responses: {
+    200: jsonContent(workspaceIdentityResponseSchema, "Workspace this proxy is bound to"),
+    401: jsonContent(adminErrorSchema, "Not authenticated"),
+    403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "Vault unreachable or PROXY_KEY invalid"),
+  },
+});
 
 const statsRoute = createRoute({
   method: "get",
@@ -30,7 +43,7 @@ const statsRoute = createRoute({
     200: jsonContent(statsResponseSchema, "Aggregated proxy stats"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
-    502: jsonContent(adminErrorSchema, "Database unavailable"),
+    502: jsonContent(adminErrorSchema, "Database unavailable or PROXY_KEY invalid"),
   },
 });
 
@@ -44,6 +57,7 @@ const logsRoute = createRoute({
     200: jsonContent(logsResponseSchema, "Paginated tunnel logs"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "PROXY_KEY invalid or vault unreachable"),
   },
 });
 
@@ -52,11 +66,11 @@ const whitelistListRoute = createRoute({
   path: "/api/admin/whitelist",
   tags: ["admin"],
   security: [{ bearerAuth: [] }],
-  request: { query: workspaceQuerySchema },
   responses: {
-    200: jsonContent(whitelistListResponseSchema, "Whitelist for workspace"),
+    200: jsonContent(whitelistListResponseSchema, "Whitelist for this proxy's workspace"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "PROXY_KEY invalid or vault unreachable"),
   },
 });
 
@@ -71,6 +85,7 @@ const whitelistCreateRoute = createRoute({
     400: jsonContent(adminErrorSchema, "Invalid hostname"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "PROXY_KEY invalid or vault unreachable"),
   },
 });
 
@@ -90,56 +105,62 @@ const whitelistDeleteRoute = createRoute({
 
 const settingsGetRoute = createRoute({
   method: "get",
-  path: "/api/admin/settings/{workspace}",
+  path: "/api/admin/settings",
   tags: ["admin"],
   security: [{ bearerAuth: [] }],
-  request: { params: settingsParamsSchema },
   responses: {
     200: jsonContent(settingsResponseSchema, "Workspace settings"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "PROXY_KEY invalid or vault unreachable"),
   },
 });
 
 const settingsUpdateRoute = createRoute({
   method: "patch",
-  path: "/api/admin/settings/{workspace}",
+  path: "/api/admin/settings",
   tags: ["admin"],
   security: [{ bearerAuth: [] }],
-  request: {
-    params: settingsParamsSchema,
-    body: jsonBody(settingsUpdateBodySchema),
-  },
+  request: { body: jsonBody(settingsUpdateBodySchema) },
   responses: {
     200: jsonContent(settingsResponseSchema, "Workspace settings updated"),
     401: jsonContent(adminErrorSchema, "Not authenticated"),
     403: jsonContent(adminErrorSchema, "Admin role required"),
+    502: jsonContent(adminErrorSchema, "PROXY_KEY invalid or vault unreachable"),
   },
 });
 
 export function registerAdminRoutes(app: OpenAPIHono, service: AdminService) {
   app.use("/api/admin/*", requireAdmin);
 
+  app.openapi(workspaceIdentityRoute, async (c) => {
+    const identity = await getProxyWorkspace();
+    return c.json(identity, 200);
+  });
+
   app.openapi(statsRoute, async (c) => {
-    const q = c.req.valid("query");
-    return c.json(await service.getStats(q), 200);
+    const { windowHours } = c.req.valid("query");
+    const { workspaceId } = await getProxyWorkspace();
+    return c.json(await service.getStats({ windowHours, workspace: workspaceId }), 200);
   });
 
   app.openapi(logsRoute, async (c) => {
-    const q = c.req.valid("query");
-    return c.json(await service.listLogs(q), 200);
+    const { page, pageSize } = c.req.valid("query");
+    const { workspaceId } = await getProxyWorkspace();
+    return c.json(await service.listLogs({ page, pageSize, workspace: workspaceId }), 200);
   });
 
   app.openapi(whitelistListRoute, async (c) => {
-    const { workspace } = c.req.valid("query");
-    return c.json(await service.listWhitelist(workspace), 200);
+    const { workspaceId } = await getProxyWorkspace();
+    return c.json(await service.listWhitelist(workspaceId), 200);
   });
 
   app.openapi(whitelistCreateRoute, async (c) => {
     const body = c.req.valid("json");
     const user = c.get("user");
+    const { workspaceId } = await getProxyWorkspace();
     const created = await service.addWhitelist({
-      workspace: body.workspace,
+      workspace: workspaceId,
       hostname: body.hostname,
       addedBy: user.email,
     });
@@ -153,13 +174,13 @@ export function registerAdminRoutes(app: OpenAPIHono, service: AdminService) {
   });
 
   app.openapi(settingsGetRoute, async (c) => {
-    const { workspace } = c.req.valid("param");
-    return c.json(await service.getSettings(workspace), 200);
+    const { workspaceId } = await getProxyWorkspace();
+    return c.json(await service.getSettings(workspaceId), 200);
   });
 
   app.openapi(settingsUpdateRoute, async (c) => {
-    const { workspace } = c.req.valid("param");
     const { whitelistMode } = c.req.valid("json");
-    return c.json(await service.updateSettings(workspace, whitelistMode), 200);
+    const { workspaceId } = await getProxyWorkspace();
+    return c.json(await service.updateSettings(workspaceId, whitelistMode), 200);
   });
 }

@@ -21,21 +21,18 @@ describe("route registration (smoke)", () => {
     { method: "POST", path: "/api/auth/logout", expectedAny: [200] },
     { method: "GET", path: "/api/auth/me", expectedAny: [401] },
     // Admin endpoints require Authorization header → 401.
+    { method: "GET", path: "/api/admin/me/workspace", expectedAny: [401] },
     { method: "GET", path: "/api/admin/stats", expectedAny: [401] },
     { method: "GET", path: "/api/admin/logs", expectedAny: [401] },
-    {
-      method: "GET",
-      path: "/api/admin/whitelist?workspace=acme",
-      expectedAny: [401],
-    },
+    { method: "GET", path: "/api/admin/whitelist", expectedAny: [401] },
     { method: "POST", path: "/api/admin/whitelist", expectedAny: [401] },
     {
       method: "DELETE",
       path: "/api/admin/whitelist/00000000-0000-4000-8000-000000000001",
       expectedAny: [401],
     },
-    { method: "GET", path: "/api/admin/settings/acme", expectedAny: [401] },
-    { method: "PATCH", path: "/api/admin/settings/acme", expectedAny: [401] },
+    { method: "GET", path: "/api/admin/settings", expectedAny: [401] },
+    { method: "PATCH", path: "/api/admin/settings", expectedAny: [401] },
   ];
 
   for (const { method, path, expectedAny } of cases) {

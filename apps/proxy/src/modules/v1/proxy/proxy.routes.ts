@@ -8,6 +8,7 @@ import { ForbiddenError, HttpError } from "@/lib/utils/errors";
 import ProxyService from "./proxy.service";
 import { insertTunnelLogFailure, insertTunnelLogSuccess } from "./proxyTunnelLog";
 import { assertWhitelistAllows } from "./proxyWhitelistGuard";
+import { getProxyWorkspace } from "@/lib/proxyIdentity";
 import { env } from "@/config/env";
 
 const postProxyRoute = createRoute({
@@ -56,8 +57,12 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
       }
     }
 
+    const proxyWorkspaceId = env.PROXY_KEY
+      ? (await getProxyWorkspace()).workspaceId
+      : workspace;
+
     const logBase = {
-      workspace,
+      workspace: proxyWorkspaceId,
       project,
       environmentId,
       targetHost,
@@ -65,7 +70,7 @@ export function registerProxyRoutes(app: OpenAPIHono, service: ProxyService) {
     };
 
     try {
-      await assertWhitelistAllows(workspace, targetHost);
+      await assertWhitelistAllows(proxyWorkspaceId, targetHost);
       const result = await service.forward(request, authorization, workspace, project, environmentId);
       const durationMs = Math.round(performance.now() - started);
       void insertTunnelLogSuccess({ ...logBase, durationMs }, result.status).catch(() => {});

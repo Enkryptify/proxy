@@ -2,21 +2,12 @@ import { z } from "@hono/zod-openapi";
 
 export const adminErrorSchema = z.object({ error: z.string() });
 
-export const workspaceQuerySchema = z.object({
-  workspace: z
-    .string()
-    .min(1)
-    .max(255)
-    .openapi({ param: { name: "workspace", in: "query" } }),
-});
+// ---------- Proxy identity ----------
 
-export const optionalWorkspaceQuerySchema = z.object({
-  workspace: z
-    .string()
-    .min(1)
-    .max(255)
-    .optional()
-    .openapi({ param: { name: "workspace", in: "query" } }),
+/** Identity of the workspace this proxy is bound to (resolved from PROXY_KEY). */
+export const workspaceIdentityResponseSchema = z.object({
+  workspaceId: z.string(),
+  workspaceName: z.string(),
 });
 
 // ---------- Stats ----------
@@ -31,12 +22,6 @@ export const statsQuerySchema = z.object({
     .max(24 * 30)
     .default(24)
     .openapi({ param: { name: "windowHours", in: "query" } }),
-  workspace: z
-    .string()
-    .min(1)
-    .max(255)
-    .optional()
-    .openapi({ param: { name: "workspace", in: "query" } }),
 });
 
 export const statsResponseSchema = z.object({
@@ -54,12 +39,6 @@ export const statsResponseSchema = z.object({
 export const logsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1).openapi({ param: { name: "page", in: "query" } }),
   pageSize: z.coerce.number().int().positive().max(200).default(25).openapi({ param: { name: "pageSize", in: "query" } }),
-  workspace: z
-    .string()
-    .min(1)
-    .max(255)
-    .optional()
-    .openapi({ param: { name: "workspace", in: "query" } }),
 });
 
 export const logEntrySchema = z.object({
@@ -102,7 +81,6 @@ export const whitelistListResponseSchema = z.object({
 });
 
 export const whitelistCreateBodySchema = z.object({
-  workspace: z.string().min(1).max(255),
   hostname: z
     .string()
     .min(1)
@@ -122,14 +100,6 @@ export const settingsResponseSchema = z.object({
   whitelistMode: z.boolean(),
 });
 
-export const settingsParamsSchema = z.object({
-  workspace: z
-    .string()
-    .min(1)
-    .max(255)
-    .openapi({ param: { name: "workspace", in: "path" } }),
-});
-
 export const settingsUpdateBodySchema = z.object({
   whitelistMode: z.boolean(),
 });
@@ -138,3 +108,4 @@ export type StatsResponse = z.infer<typeof statsResponseSchema>;
 export type LogsResponse = z.infer<typeof logsResponseSchema>;
 export type WhitelistEntry = z.infer<typeof whitelistEntrySchema>;
 export type SettingsResponse = z.infer<typeof settingsResponseSchema>;
+export type WorkspaceIdentityResponse = z.infer<typeof workspaceIdentityResponseSchema>;
