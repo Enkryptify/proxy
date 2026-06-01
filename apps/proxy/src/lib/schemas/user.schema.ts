@@ -8,6 +8,7 @@ export const user = createTable("user", {
     username: varchar("username", { length: 255 }).notNull().unique(),
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     password: varchar("password", { length: 255 }).notNull(),
+    role: varchar("role", { length: 32 }).notNull().default("user"),
 });
 
 export const refreshToken = createTable("refresh_token", {

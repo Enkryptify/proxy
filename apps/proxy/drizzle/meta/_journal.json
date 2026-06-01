@@ -15,6 +15,13 @@
       "when": 1777367600000,
       "tag": "0001_tunnel_log_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779580800000,
+      "tag": "0002_admin_panel",
+      "breakpoints": true
     }
   ]
 }
