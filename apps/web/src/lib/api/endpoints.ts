@@ -7,6 +7,7 @@ import type {
   User,
   WhitelistEntry,
   WhitelistList,
+  WorkspaceIdentity,
   WorkspaceSettings,
 } from "./types";
 
@@ -22,41 +23,39 @@ export const healthApi = {
   get: () => api.get<HealthStatus>("/api/health"),
 };
 
+export const workspaceApi = {
+  me: () => api.get<WorkspaceIdentity>("/api/admin/me/workspace"),
+};
+
 export const statsApi = {
-  get: (params: { windowHours?: number; workspace?: string } = {}) => {
+  get: (params: { windowHours?: number } = {}) => {
     const q = new URLSearchParams();
     if (params.windowHours !== undefined) {
       q.set("windowHours", String(params.windowHours));
     }
-    if (params.workspace) q.set("workspace", params.workspace);
     const qs = q.toString();
     return api.get<Stats>(`/api/admin/stats${qs ? `?${qs}` : ""}`);
   },
 };
 
 export const logsApi = {
-  list: (params: { page: number; pageSize: number; workspace?: string }) => {
+  list: (params: { page: number; pageSize: number }) => {
     const q = new URLSearchParams();
     q.set("page", String(params.page));
     q.set("pageSize", String(params.pageSize));
-    if (params.workspace) q.set("workspace", params.workspace);
     return api.get<LogsPage>(`/api/admin/logs?${q.toString()}`);
   },
 };
 
 export const whitelistApi = {
-  list: (workspace: string) =>
-    api.get<WhitelistList>(`/api/admin/whitelist?workspace=${encodeURIComponent(workspace)}`),
-  add: (workspace: string, hostname: string) =>
-    api.post<WhitelistEntry>("/api/admin/whitelist", { workspace, hostname }),
+  list: () => api.get<WhitelistList>("/api/admin/whitelist"),
+  add: (hostname: string) =>
+    api.post<WhitelistEntry>("/api/admin/whitelist", { hostname }),
   remove: (id: string) => api.delete<{ ok: true }>(`/api/admin/whitelist/${id}`),
 };
 
 export const settingsApi = {
-  get: (workspace: string) =>
-    api.get<WorkspaceSettings>(`/api/admin/settings/${encodeURIComponent(workspace)}`),
-  update: (workspace: string, whitelistMode: boolean) =>
-    api.patch<WorkspaceSettings>(`/api/admin/settings/${encodeURIComponent(workspace)}`, {
-      whitelistMode,
-    }),
+  get: () => api.get<WorkspaceSettings>("/api/admin/settings"),
+  update: (whitelistMode: boolean) =>
+    api.patch<WorkspaceSettings>("/api/admin/settings", { whitelistMode }),
 };
