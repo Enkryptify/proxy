@@ -23,6 +23,13 @@ function assertDb() {
   return db;
 }
 
+/** Pre-computed argon2 hash used to keep login timing roughly constant when a user is not found. */
+let dummyHashPromise: Promise<string> | null = null;
+function getDummyHash(): Promise<string> {
+  dummyHashPromise ??= Bun.password.hash("not-a-real-password-used-for-timing-only");
+  return dummyHashPromise;
+}
+
 export type AuthIssuedSession = {
   accessToken: string;
   accessTokenExpiresAt: number;
@@ -40,12 +47,12 @@ export default class AuthService {
     const row = await database.query.user.findFirst({
       where: eq(user.email, input.email.toLowerCase()),
     });
-    if (!row) {
-      throw new UnauthorizedError("Invalid email or password");
-    }
 
-    const ok = await Bun.password.verify(input.password, row.password);
-    if (!ok) {
+    // Always run password.verify so the response time is the same whether or not the
+    // email exists. Prevents email enumeration via response-time side channel.
+    const passwordHash = row?.password ?? (await getDummyHash());
+    const ok = await Bun.password.verify(input.password, passwordHash);
+    if (!row || !ok) {
       throw new UnauthorizedError("Invalid email or password");
     }
     if (row.role !== "admin") {
