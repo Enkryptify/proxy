@@ -4,11 +4,11 @@ import { workspaceApi } from "@/lib/api/endpoints";
 import type { WorkspaceIdentity } from "@/lib/api/types";
 
 export function useProxyWorkspace() {
-  const { isAuthenticated } = useAuth();
+  const auth = useAuth();
   return useQuery<WorkspaceIdentity>({
     queryKey: ["workspace", "me"],
     queryFn: workspaceApi.me,
-    enabled: isAuthenticated,
+    enabled: auth.status === "authenticated",
     staleTime: 5 * 60_000,
     gcTime: 60 * 60_000,
     retry: false,
