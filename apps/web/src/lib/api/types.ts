@@ -69,6 +69,11 @@ export type WorkspaceSettings = {
   whitelistMode: boolean;
 };
 
+export type WorkspaceIdentity = {
+  workspaceId: string;
+  workspaceName: string;
+};
+
 export type ApiErrorBody = {
   error: string;
 };
