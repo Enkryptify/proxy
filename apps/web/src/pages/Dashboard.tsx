@@ -34,10 +34,11 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
+        title="Dashboard"
         description={
           workspace.isSuccess
-            ? `Statistieken voor werkruimte "${workspace.data.workspaceName}" — laatste 24 uur`
-            : "Statistieken — laatste 24 uur"
+            ? `Statistics for workspace "${workspace.data.workspaceName}" — last 24 hours`
+            : "Statistics — last 24 hours"
         }
         actions={
           health.isLoading ? (
@@ -57,13 +58,13 @@ export function Dashboard() {
           value={stats.isSuccess ? formatNumber(stats.data.totalRequests) : null}
           hint={
             stats.isSuccess
-              ? `${formatNumber(stats.data.successCount)} succes • ${formatNumber(stats.data.failureCount)} fout`
+              ? `${formatNumber(stats.data.successCount)} success • ${formatNumber(stats.data.failureCount)} failed`
               : undefined
           }
         />
         <StatTile
           icon={CheckCircle2}
-          label="Slaagpercentage"
+          label="Success rate"
           value={
             stats.isSuccess && stats.data.totalRequests > 0
               ? `${((stats.data.successCount / stats.data.totalRequests) * 100).toFixed(1)}%`
@@ -71,11 +72,11 @@ export function Dashboard() {
               ? "—"
               : null
           }
-          hint="HTTP 2xx-3xx upstream + geen proxy-fout"
+          hint="HTTP 2xx-3xx upstream + no proxy error"
         />
         <StatTile
           icon={Timer}
-          label="Gem. responstijd"
+          label="Avg. response time"
           value={stats.isSuccess ? formatDuration(stats.data.avgDurationMs) : null}
           hint={
             stats.isSuccess ? `p95 ${formatDuration(stats.data.p95DurationMs)}` : undefined
@@ -83,31 +84,31 @@ export function Dashboard() {
         />
         <StatTile
           icon={TriangleAlert}
-          label="Mislukte requests"
+          label="Failed requests"
           value={stats.isSuccess ? formatNumber(stats.data.failureCount) : null}
-          hint="Bevat SSRF-blokkades, whitelist-rejects, upstream-fouten"
+          hint="Includes SSRF blocks, whitelist rejects, upstream errors"
         />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Proxy-status</CardTitle>
+          <CardTitle>Proxy status</CardTitle>
           <CardDescription>
-            Live data van het <code className="rounded bg-muted px-1 py-0.5">/health</code>{" "}
-            endpoint van de proxy.
+            Live data from the proxy <code className="rounded bg-muted px-1 py-0.5">/health</code>{" "}
+            endpoint.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {health.isError ? (
             <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              Kan de proxy niet bereiken. Controleer of <code>/api/health</code> beschikbaar is.
+              Cannot reach the proxy. Check that <code>/api/health</code> is available.
             </div>
           ) : health.data ? (
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <Field label="Status" value={health.data.status} />
               <Field label="Runtime" value={health.data.runtime} />
               <Field
-                label="Laatste check"
+                label="Last check"
                 value={new Date(health.data.timestamp).toLocaleString()}
               />
             </dl>

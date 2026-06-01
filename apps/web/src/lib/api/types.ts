@@ -69,6 +69,11 @@ export type WorkspaceSettings = {
   whitelistMode: boolean;
 };
 
+/**
+ * Identity of the workspace this proxy is bound to (resolved server-side
+ * from `PROXY_KEY`). The admin panel only knows about one workspace at a
+ * time — there is no workspace picker on the UI.
+ */
 export type WorkspaceIdentity = {
   workspaceId: string;
   workspaceName: string;

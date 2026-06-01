@@ -13,8 +13,8 @@ import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/hooks/use-toast";
 
 const schema = z.object({
-  email: z.email("Voer een geldig e-mailadres in"),
-  password: z.string().min(1, "Wachtwoord is verplicht"),
+  email: z.email("Enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -48,9 +48,9 @@ export function Login() {
       await auth.login(values.email, values.password);
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : "Inloggen mislukt. Probeer het opnieuw.";
+        err instanceof ApiError ? err.message : "Sign in failed. Please try again.";
       setError("password", { message });
-      toast({ title: "Inloggen mislukt", description: message, variant: "destructive" });
+      toast({ title: "Sign in failed", description: message, variant: "destructive" });
     }
   };
 
@@ -59,9 +59,7 @@ export function Login() {
       <Card className="w-full max-w-sm border-border bg-card">
         <CardHeader className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="brand-mark grid h-8 w-8 place-items-center rounded-md text-[14px] font-bold text-primary-foreground">
-              K
-            </div>
+            <img src="/logo.svg" alt="Enkryptify" className="h-7 w-auto" />
             <span className="text-[13px] font-semibold uppercase tracking-tight-wide text-foreground">
               Enkryptify
             </span>

@@ -27,13 +27,13 @@ export function Settings() {
       queryClient.setQueryData(["settings"], data);
       void queryClient.invalidateQueries({ queryKey: ["whitelist"] });
       toast({
-        title: data.whitelistMode ? "Whitelistmodus ingeschakeld" : "Whitelistmodus uitgeschakeld",
+        title: data.whitelistMode ? "Whitelist mode enabled" : "Whitelist mode disabled",
       });
     },
     onError: (err) => {
       toast({
-        title: "Kon instelling niet wijzigen",
-        description: err instanceof ApiError ? err.message : "Onbekende fout",
+        title: "Could not update setting",
+        description: err instanceof ApiError ? err.message : "Unknown error",
         variant: "destructive",
       });
     },
@@ -42,7 +42,7 @@ export function Settings() {
   if (!workspace.isSuccess) {
     return (
       <>
-        <PageHeader description="Werkruimte-instellingen." />
+        <PageHeader description="Workspace settings." />
         <WorkspaceRequired />
       </>
     );
@@ -51,23 +51,23 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Instellingen"
-        description={`Instellingen voor werkruimte "${workspace.data.workspaceName}".`}
+        title="Settings"
+        description={`Settings for workspace "${workspace.data.workspaceName}".`}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Whitelistmodus</CardTitle>
+          <CardTitle>Whitelist mode</CardTitle>
           <CardDescription>
-            Wanneer ingeschakeld, blokkeert de proxy elke request naar een upstream-hostname die
-            niet voorkomt op de whitelist van deze werkruimte. Bij uit: de whitelist wordt niet
-            afgedwongen, alle hostnamen zijn toegestaan.
+            When enabled, the proxy blocks every request to an upstream hostname that is not
+            on this workspace's whitelist. When disabled, the whitelist is not enforced and all
+            hostnames are allowed.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-3">
           {query.isError ? (
             <span className="text-sm text-destructive">
-              {query.error instanceof ApiError ? query.error.message : "Kon instellingen niet laden"}
+              {query.error instanceof ApiError ? query.error.message : "Could not load settings"}
             </span>
           ) : query.data ? (
             <>
@@ -78,7 +78,7 @@ export function Settings() {
                 onCheckedChange={(checked) => mutation.mutate(checked)}
               />
               <Label htmlFor="whitelist-mode-settings" className="cursor-pointer">
-                {query.data.whitelistMode ? "Ingeschakeld" : "Uitgeschakeld"}
+                {query.data.whitelistMode ? "Enabled" : "Disabled"}
               </Label>
             </>
           ) : (
