@@ -1,10 +1,6 @@
 import { baseModel, createTable } from "./general";
 import { boolean, index, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-/**
- * Approved upstream hostnames per workspace. Combined with `workspace_settings.whitelist_mode`
- * to either soft-warn or hard-reject outbound proxy calls in `proxy.routes.ts`.
- */
 export const whitelist_host = createTable(
   "whitelist_host",
   {
@@ -20,10 +16,6 @@ export const whitelist_host = createTable(
   ],
 );
 
-/**
- * Per-workspace settings. We use one row per workspace and upsert on toggles.
- * `whitelist_mode` defaults to false so an unconfigured workspace stays open.
- */
 export const workspace_settings = createTable("workspace_settings", {
   ...baseModel,
   workspace: varchar("workspace", { length: 255 }).notNull().unique(),
