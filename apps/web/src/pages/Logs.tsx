@@ -45,10 +45,11 @@ export function Logs() {
   return (
     <div className="space-y-6">
       <PageHeader
+        title="Logs"
         description={
           workspace.isSuccess
-            ? `Recente doorsturingen voor werkruimte "${workspace.data.workspaceName}"`
-            : "Recente doorsturingen"
+            ? `Recent proxy traffic for workspace "${workspace.data.workspaceName}"`
+            : "Recent proxy traffic"
         }
         actions={
           <Button
@@ -58,7 +59,7 @@ export function Logs() {
             disabled={query.isFetching}
           >
             <RefreshCw className={query.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
-            Verversen
+            Refresh
           </Button>
         }
       />
@@ -67,7 +68,7 @@ export function Logs() {
         <CardContent className="p-0">
           {query.isError ? (
             <div className="p-4 text-sm text-destructive">
-              {query.error instanceof ApiError ? query.error.message : "Kon logboek niet laden"}
+              {query.error instanceof ApiError ? query.error.message : "Could not load logs"}
             </div>
           ) : !query.data ? (
             <div className="space-y-2 p-4">
@@ -77,18 +78,18 @@ export function Logs() {
             </div>
           ) : query.data.items.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              Geen logregels gevonden.
+              No log entries found.
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tijdstip</TableHead>
+                  <TableHead>When</TableHead>
                   <TableHead>Project</TableHead>
-                  <TableHead>Bestemming</TableHead>
+                  <TableHead>Destination</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Duur</TableHead>
-                  <TableHead>Sleutels</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Keys</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -131,7 +132,7 @@ export function Logs() {
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div>
           {query.isSuccess
-            ? `Pagina ${page} van ${totalPages} (${total.toLocaleString()} totaal)`
+            ? `Page ${page} of ${totalPages} (${total.toLocaleString()} total)`
             : "..."}
         </div>
         <div className="flex items-center gap-2">
@@ -142,7 +143,7 @@ export function Logs() {
             disabled={page <= 1 || query.isFetching}
           >
             <ChevronLeft className="h-4 w-4" />
-            Vorige
+            Previous
           </Button>
           <Button
             size="sm"
@@ -150,7 +151,7 @@ export function Logs() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages || query.isFetching}
           >
-            Volgende
+            Next
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>

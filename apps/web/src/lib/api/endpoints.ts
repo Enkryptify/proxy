@@ -23,6 +23,11 @@ export const healthApi = {
   get: () => api.get<HealthStatus>("/api/health"),
 };
 
+/**
+ * Workspace this proxy is bound to. Resolved server-side from PROXY_KEY,
+ * so the panel renders a read-only workspace header instead of asking the
+ * user to pick one.
+ */
 export const workspaceApi = {
   me: () => api.get<WorkspaceIdentity>("/api/admin/me/workspace"),
 };
