@@ -72,22 +72,23 @@ export default class AuthService {
     const payload = await verifyRefreshToken(rawToken);
     const tokenHash = await hashRefreshToken(rawToken);
 
-    const existing = await database.query.refreshToken.findFirst({
-      where: and(
-        eq(refreshToken.tokenHash, tokenHash),
-        eq(refreshToken.isRevoked, false),
-        gt(refreshToken.expiresAt, new Date()),
-      ),
-    });
-    if (!existing) {
+    // Atomically claim the refresh row so concurrent requests cannot both rotate.
+    const [claimed] = await database
+      .update(refreshToken)
+      .set({ isRevoked: true })
+      .where(
+        and(
+          eq(refreshToken.tokenHash, tokenHash),
+          eq(refreshToken.isRevoked, false),
+          gt(refreshToken.expiresAt, new Date()),
+        ),
+      )
+      .returning({ userId: refreshToken.userId });
+
+    if (!claimed) {
       throw new UnauthorizedError("Refresh token revoked or expired");
     }
-    if (existing.userId !== payload.sub) {
-      // Token does not match the row it claims (potential reuse). Revoke and reject.
-      await database
-        .update(refreshToken)
-        .set({ isRevoked: true })
-        .where(eq(refreshToken.id, existing.id));
+    if (claimed.userId !== payload.sub) {
       throw new UnauthorizedError("Refresh token mismatch");
     }
 
@@ -97,12 +98,6 @@ export default class AuthService {
     if (!userRow || userRow.role !== "admin") {
       throw new UnauthorizedError("User no longer authorized");
     }
-
-    // Rotate: revoke this row, issue a brand-new pair.
-    await database
-      .update(refreshToken)
-      .set({ isRevoked: true })
-      .where(eq(refreshToken.id, existing.id));
 
     return this.#issueSession(
       {
@@ -117,9 +112,9 @@ export default class AuthService {
 
   async logout(rawToken: string | undefined): Promise<void> {
     if (!rawToken) return;
-    if (!db) return;
+    const database = assertDb();
     const tokenHash = await hashRefreshToken(rawToken);
-    await db
+    await database
       .update(refreshToken)
       .set({ isRevoked: true })
       .where(eq(refreshToken.tokenHash, tokenHash));
