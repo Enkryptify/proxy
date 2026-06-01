@@ -16,7 +16,8 @@ export function Topbar() {
         </div>
         <Input
           value={workspace}
-          onChange={(e) => setWorkspace(e.target.value.trim())}
+          onChange={(e) => setWorkspace(e.target.value)}
+          onBlur={(e) => setWorkspace(e.target.value.trim())}
           placeholder="bv. acme"
           aria-label="Werkruimte"
           className="h-9 w-56"

@@ -10,6 +10,13 @@ export type RefreshResult =
 let inFlight: Promise<RefreshResult> | null = null;
 const listeners = new Set<(result: RefreshResult) => void>();
 
+/** Bumped on login/logout so in-flight refresh callbacks cannot overwrite newer auth intent. */
+let authEpoch = 0;
+
+export function bumpAuthEpoch(): void {
+  authEpoch += 1;
+}
+
 /**
  * Single source of truth for refreshing the session.
  *
@@ -20,13 +27,16 @@ const listeners = new Set<(result: RefreshResult) => void>();
  */
 export function refreshSession(): Promise<RefreshResult> {
   inFlight ??= (async (): Promise<RefreshResult> => {
+    const epochAtStart = authEpoch;
     let result: RefreshResult;
     try {
       const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
         method: "POST",
         credentials: "include",
       });
-      if (!res.ok) {
+      if (epochAtStart !== authEpoch) {
+        result = { ok: false };
+      } else if (!res.ok) {
         result = { ok: false };
       } else {
         const session = (await res.json()) as SessionResponse;

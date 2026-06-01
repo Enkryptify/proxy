@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { authApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { setAccessToken } from "./tokenStore";
-import { refreshSession, subscribeRefresh } from "./refresh";
+import { bumpAuthEpoch, refreshSession, subscribeRefresh } from "./refresh";
 import type { User } from "@/lib/api/types";
 
 type AuthState =
@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [runRefresh, state.status]);
 
   const login = useCallback(async (email: string, password: string) => {
+    bumpAuthEpoch();
     try {
       const session = await authApi.login(email, password);
       setAccessToken(session.accessToken, session.accessTokenExpiresAt);
@@ -107,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearTimer, runRefresh]);
 
   const logout = useCallback(async () => {
+    bumpAuthEpoch();
     clearTimer();
     try {
       await authApi.logout();
