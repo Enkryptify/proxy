@@ -12,6 +12,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "allowJs": true,
     "types": ["node"]
   },
   "include": ["vite.config.ts", "tailwind.config.ts", "postcss.config.js"]
