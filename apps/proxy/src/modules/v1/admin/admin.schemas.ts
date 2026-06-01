@@ -84,7 +84,9 @@ export const logsResponseSchema = z.object({
 
 // ---------- Whitelist ----------
 
-const HOSTNAME_RE = /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})+$/;
+/** RFC 1123-style labels: alphanumeric ends, hyphens only in the middle (input is lowercased). */
+const HOSTNAME_RE =
+  /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
 export const whitelistEntrySchema = z.object({
   id: z.uuid(),

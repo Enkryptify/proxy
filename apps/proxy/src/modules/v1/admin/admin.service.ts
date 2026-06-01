@@ -126,21 +126,6 @@ export default class AdminService {
     addedBy: string | null;
   }): Promise<WhitelistEntry> {
     const database = assertDb();
-    const existing = await database.query.whitelist_host.findFirst({
-      where: and(
-        eq(whitelist_host.workspace, input.workspace),
-        eq(whitelist_host.hostname, input.hostname),
-      ),
-    });
-    if (existing) {
-      return {
-        id: existing.id,
-        workspace: existing.workspace,
-        hostname: existing.hostname,
-        addedBy: existing.addedBy ?? null,
-        createdAt: existing.createdAt.toISOString(),
-      };
-    }
 
     const [row] = await database
       .insert(whitelist_host)
@@ -149,13 +134,36 @@ export default class AdminService {
         hostname: input.hostname,
         addedBy: input.addedBy,
       })
+      .onConflictDoNothing({
+        target: [whitelist_host.workspace, whitelist_host.hostname],
+      })
       .returning();
+
+    if (row) {
+      return {
+        id: row.id,
+        workspace: row.workspace,
+        hostname: row.hostname,
+        addedBy: row.addedBy ?? null,
+        createdAt: row.createdAt.toISOString(),
+      };
+    }
+
+    const existing = await database.query.whitelist_host.findFirst({
+      where: and(
+        eq(whitelist_host.workspace, input.workspace),
+        eq(whitelist_host.hostname, input.hostname),
+      ),
+    });
+    if (!existing) {
+      throw new NotFoundError("Whitelist entry not found after conflict");
+    }
     return {
-      id: row!.id,
-      workspace: row!.workspace,
-      hostname: row!.hostname,
-      addedBy: row!.addedBy ?? null,
-      createdAt: row!.createdAt.toISOString(),
+      id: existing.id,
+      workspace: existing.workspace,
+      hostname: existing.hostname,
+      addedBy: existing.addedBy ?? null,
+      createdAt: existing.createdAt.toISOString(),
     };
   }
 
