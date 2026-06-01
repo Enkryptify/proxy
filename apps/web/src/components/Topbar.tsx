@@ -1,12 +1,11 @@
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { useSelectedWorkspace } from "@/lib/workspace";
+import { useProxyWorkspace } from "@/lib/workspace";
 
 export function Topbar() {
   const auth = useAuth();
-  const [workspace, setWorkspace] = useSelectedWorkspace();
+  const workspace = useProxyWorkspace();
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-8">
@@ -14,14 +13,16 @@ export function Topbar() {
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Werkruimte
         </div>
-        <Input
-          value={workspace}
-          onChange={(e) => setWorkspace(e.target.value)}
-          onBlur={(e) => setWorkspace(e.target.value.trim())}
-          placeholder="bv. acme"
-          aria-label="Werkruimte"
-          className="h-9 w-56"
-        />
+        <div
+          className="text-sm font-medium text-foreground"
+          title={workspace.isSuccess ? `Workspace id: ${workspace.data.workspaceId}` : undefined}
+        >
+          {workspace.isSuccess
+            ? workspace.data.workspaceName
+            : workspace.isLoading
+            ? "Laden..."
+            : "—"}
+        </div>
       </div>
       <div className="flex items-center gap-3">
         {auth.status === "authenticated" ? (

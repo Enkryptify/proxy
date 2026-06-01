@@ -1,31 +1,17 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { workspaceApi } from "@/lib/api/endpoints";
+import type { WorkspaceIdentity } from "@/lib/api/types";
 
-const STORAGE_KEY = "proxy-admin:selected-workspace";
-
-function read(): string {
-  if (typeof window === "undefined") return "";
-  return window.localStorage.getItem(STORAGE_KEY) ?? "";
-}
-
-export function useSelectedWorkspace(): [string, (value: string) => void] {
-  const [value, setValue] = useState<string>(() => read());
-
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setValue(e.newValue ?? "");
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
-  const set = (next: string) => {
-    setValue(next);
-    if (next) {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  };
-
-  return [value, set];
+export function useProxyWorkspace() {
+  const { isAuthenticated } = useAuth();
+  return useQuery<WorkspaceIdentity>({
+    queryKey: ["workspace", "me"],
+    queryFn: workspaceApi.me,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60_000,
+    gcTime: 60 * 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 }
