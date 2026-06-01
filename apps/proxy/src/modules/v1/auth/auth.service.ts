@@ -12,7 +12,7 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "@/lib/utils/tokens";
-import type { LoginRequest, MeResponse } from "./auth.schemas";
+import type { IssuedSession, LoginRequest, MeResponse, UserRole } from "./auth.schemas";
 
 function assertDb() {
   if (!db) {
@@ -30,26 +30,16 @@ function getDummyHash(): Promise<string> {
   return dummyHashPromise;
 }
 
-export type AuthIssuedSession = {
-  accessToken: string;
-  accessTokenExpiresAt: number;
-  refreshToken: string;
-  refreshTokenExpiresAt: number;
-  user: MeResponse;
-};
-
 export default class AuthService {
   async login(
     input: LoginRequest,
     meta: { userAgent: string | null; ipAddress: string | null },
-  ): Promise<AuthIssuedSession> {
+  ): Promise<IssuedSession> {
     const database = assertDb();
     const row = await database.query.user.findFirst({
       where: eq(user.email, input.email.toLowerCase()),
     });
 
-    // Always run password.verify so the response time is the same whether or not the
-    // email exists. Prevents email enumeration via response-time side channel.
     const passwordHash = row?.password ?? (await getDummyHash());
     const ok = await Bun.password.verify(input.password, passwordHash);
     if (!row || !ok) {
@@ -64,7 +54,7 @@ export default class AuthService {
         sub: row.id,
         email: row.email,
         username: row.username,
-        role: row.role as "admin" | "user",
+        role: row.role,
       },
       meta,
     );
@@ -73,7 +63,7 @@ export default class AuthService {
   async refresh(
     rawToken: string | undefined,
     meta: { userAgent: string | null; ipAddress: string | null },
-  ): Promise<AuthIssuedSession> {
+  ): Promise<IssuedSession> {
     if (!rawToken) throw new UnauthorizedError("Missing refresh cookie");
     const database = assertDb();
     const payload = await verifyRefreshToken(rawToken);
@@ -111,7 +101,7 @@ export default class AuthService {
         sub: userRow.id,
         email: userRow.email,
         username: userRow.username,
-        role: userRow.role as "admin" | "user",
+        role: userRow.role,
       },
       meta,
     );
@@ -135,14 +125,14 @@ export default class AuthService {
       id: row.id,
       email: row.email,
       username: row.username,
-      role: row.role as "admin" | "user",
+      role: row.role,
     };
   }
 
   async #issueSession(
-    user: { sub: string; email: string; username: string; role: "admin" | "user" },
+    user: { sub: string; email: string; username: string; role: UserRole },
     meta: { userAgent: string | null; ipAddress: string | null },
-  ): Promise<AuthIssuedSession> {
+  ): Promise<IssuedSession> {
     const database = assertDb();
     const sid = crypto.randomUUID();
 
