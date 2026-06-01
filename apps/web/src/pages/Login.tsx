@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { KeyRound, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,21 +55,28 @@ export function Login() {
   };
 
   return (
-    <div className="grid-bg flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="space-y-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground">
-            <KeyRound className="h-5 w-5" />
+    <div className="grid-bg flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-sm border-border bg-card">
+        <CardHeader className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="brand-mark grid h-8 w-8 place-items-center rounded-md text-[14px] font-bold text-primary-foreground">
+              K
+            </div>
+            <span className="text-[13px] font-semibold uppercase tracking-tight-wide text-foreground">
+              Enkryptify
+            </span>
           </div>
-          <div>
-            <CardTitle>Proxy admin</CardTitle>
-            <CardDescription>Log in om het beheerpaneel te openen.</CardDescription>
+          <div className="space-y-1">
+            <CardTitle className="text-base font-medium">Sign in to admin panel</CardTitle>
+            <CardDescription>Authenticate with your Enkryptify admin credentials.</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email" className="text-[11px] uppercase tracking-tight-wide text-muted-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -84,7 +91,9 @@ export function Login() {
               ) : null}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Wachtwoord</Label>
+              <Label htmlFor="password" className="text-[11px] uppercase tracking-tight-wide text-muted-foreground">
+                Password
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -99,7 +108,7 @@ export function Login() {
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Inloggen
+              Sign in
             </Button>
           </form>
         </CardContent>

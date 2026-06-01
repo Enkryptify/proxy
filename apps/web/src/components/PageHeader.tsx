@@ -7,17 +7,21 @@ export function PageHeader({
   actions,
   className,
 }: {
-  title: string;
+  title?: string;
   description?: string;
   actions?: ReactNode;
   className?: string;
 }) {
+  if (!title && !description && !actions) return null;
+
   return (
-    <div className={cn("mb-6 flex flex-wrap items-end justify-between gap-3", className)}>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <div className={cn("mb-6 flex flex-wrap items-start justify-between gap-3", className)}>
+      <div className="space-y-1">
+        {title ? (
+          <h2 className="text-base font-medium tracking-tight text-foreground">{title}</h2>
+        ) : null}
         {description ? (
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">{description}</p>
         ) : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}

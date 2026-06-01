@@ -11,6 +11,32 @@ export default {
       screens: { "2xl": "1400px" },
     },
     extend: {
+      fontFamily: {
+        sans: [
+          '"Geist Mono"',
+          "ui-monospace",
+          '"SF Mono"',
+          '"JetBrains Mono"',
+          '"Fira Code"',
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          '"Liberation Mono"',
+          "monospace",
+        ],
+        mono: [
+          '"Geist Mono"',
+          "ui-monospace",
+          '"SF Mono"',
+          '"JetBrains Mono"',
+          '"Fira Code"',
+          "SFMono-Regular",
+          "Menlo",
+          "Consolas",
+          '"Liberation Mono"',
+          "monospace",
+        ],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -53,11 +79,18 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      letterSpacing: {
+        "tight-wide": "0.08em",
       },
       keyframes: {
         "accordion-down": {

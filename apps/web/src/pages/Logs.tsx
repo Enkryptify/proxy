@@ -45,7 +45,6 @@ export function Logs() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Logboek"
         description={
           workspace.isSuccess
             ? `Recente doorsturingen voor werkruimte "${workspace.data.workspaceName}"`

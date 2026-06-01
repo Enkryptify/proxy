@@ -34,7 +34,6 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
         description={
           workspace.isSuccess
             ? `Statistieken voor werkruimte "${workspace.data.workspaceName}" — laatste 24 uur`
@@ -42,7 +41,7 @@ export function Dashboard() {
         }
         actions={
           health.isLoading ? (
-            <Skeleton className="h-7 w-28" />
+            <Skeleton className="h-6 w-24" />
           ) : (
             <Badge variant={proxyReachable ? "success" : "destructive"}>
               {proxyReachable ? "Proxy online" : "Proxy offline"}
