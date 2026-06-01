@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { settingsApi, whitelistApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatRelative } from "@/lib/format";
-import { useSelectedWorkspace } from "@/lib/workspace";
+import { useProxyWorkspace } from "@/lib/workspace";
 
 const hostnameSchema = z.object({
   hostname: z
@@ -40,20 +40,20 @@ const hostnameSchema = z.object({
 type HostnameForm = z.infer<typeof hostnameSchema>;
 
 export function Whitelist() {
-  const [workspace] = useSelectedWorkspace();
+  const workspace = useProxyWorkspace();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const listQuery = useQuery({
-    queryKey: ["whitelist", workspace],
-    queryFn: () => whitelistApi.list(workspace),
-    enabled: workspace.length > 0,
+    queryKey: ["whitelist"],
+    queryFn: whitelistApi.list,
+    enabled: workspace.isSuccess,
   });
 
   const addMutation = useMutation({
-    mutationFn: (hostname: string) => whitelistApi.add(workspace, hostname),
+    mutationFn: whitelistApi.add,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["whitelist", workspace] });
+      void queryClient.invalidateQueries({ queryKey: ["whitelist"] });
       toast({ title: "Host toegevoegd" });
     },
     onError: (err) => {
@@ -68,7 +68,7 @@ export function Whitelist() {
   const removeMutation = useMutation({
     mutationFn: (id: string) => whitelistApi.remove(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["whitelist", workspace] });
+      void queryClient.invalidateQueries({ queryKey: ["whitelist"] });
       toast({ title: "Host verwijderd" });
     },
     onError: (err) => {
@@ -81,12 +81,12 @@ export function Whitelist() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => settingsApi.update(workspace, enabled),
+    mutationFn: settingsApi.update,
     onSuccess: (data) => {
-      queryClient.setQueryData<typeof listQuery.data>(["whitelist", workspace], (prev) =>
+      queryClient.setQueryData<typeof listQuery.data>(["whitelist"], (prev) =>
         prev ? { ...prev, whitelistMode: data.whitelistMode } : prev,
       );
-      void queryClient.invalidateQueries({ queryKey: ["settings", workspace] });
+      void queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast({
         title: data.whitelistMode ? "Whitelistmodus ingeschakeld" : "Whitelistmodus uitgeschakeld",
       });
@@ -105,7 +105,7 @@ export function Whitelist() {
     defaultValues: { hostname: "" },
   });
 
-  if (!workspace) {
+  if (!workspace.isSuccess) {
     return (
       <>
         <PageHeader
@@ -126,7 +126,7 @@ export function Whitelist() {
     <div className="space-y-6">
       <PageHeader
         title="Whitelist"
-        description={`Goedgekeurde upstream-hostnamen voor werkruimte "${workspace}".`}
+        description={`Goedgekeurde upstream-hostnamen voor werkruimte "${workspace.data.workspaceName}".`}
         actions={
           listQuery.isSuccess ? (
             <Badge variant={listQuery.data.whitelistMode ? "success" : "secondary"}>
