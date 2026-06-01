@@ -17,7 +17,7 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { logsApi } from "@/lib/api/endpoints";
 import { formatDateTime, formatDuration } from "@/lib/format";
-import { useSelectedWorkspace } from "@/lib/workspace";
+import { useProxyWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 25;
 
@@ -29,14 +29,14 @@ function statusVariant(code: number, outcome: "success" | "failure") {
 }
 
 export function Logs() {
-  const [workspace] = useSelectedWorkspace();
+  const workspace = useProxyWorkspace();
   const [page, setPage] = useState(1);
 
   const query = useQuery({
-    queryKey: ["logs", { workspace, page, pageSize: PAGE_SIZE }],
-    queryFn: () =>
-      logsApi.list({ page, pageSize: PAGE_SIZE, workspace: workspace || undefined }),
+    queryKey: ["logs", { page, pageSize: PAGE_SIZE }],
+    queryFn: () => logsApi.list({ page, pageSize: PAGE_SIZE }),
     placeholderData: keepPreviousData,
+    enabled: workspace.isSuccess,
   });
 
   const total = query.data?.total ?? 0;
@@ -47,9 +47,9 @@ export function Logs() {
       <PageHeader
         title="Logboek"
         description={
-          workspace
-            ? `Recente doorsturingen voor werkruimte "${workspace}"`
-            : "Recente doorsturingen voor alle werkruimten"
+          workspace.isSuccess
+            ? `Recente doorsturingen voor werkruimte "${workspace.data.workspaceName}"`
+            : "Recente doorsturingen"
         }
         actions={
           <Button
@@ -85,7 +85,7 @@ export function Logs() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tijdstip</TableHead>
-                  <TableHead>Werkruimte / project</TableHead>
+                  <TableHead>Project</TableHead>
                   <TableHead>Bestemming</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Duur</TableHead>
@@ -99,8 +99,7 @@ export function Logs() {
                       {formatDateTime(row.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{row.workspace}</div>
-                      <div className="text-xs text-muted-foreground">{row.project}</div>
+                      <div className="font-medium">{row.project}</div>
                     </TableCell>
                     <TableCell className="font-mono">{row.targetHost}</TableCell>
                     <TableCell>

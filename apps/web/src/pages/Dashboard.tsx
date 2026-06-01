@@ -6,13 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/PageHeader";
 import { healthApi, statsApi } from "@/lib/api/endpoints";
 import { formatDuration, formatNumber } from "@/lib/format";
-import { useSelectedWorkspace } from "@/lib/workspace";
+import { useProxyWorkspace } from "@/lib/workspace";
 
 const HEALTH_REFETCH_MS = 10_000;
 const STATS_REFETCH_MS = 30_000;
 
 export function Dashboard() {
-  const [workspace] = useSelectedWorkspace();
+  const workspace = useProxyWorkspace();
 
   const health = useQuery({
     queryKey: ["health"],
@@ -23,9 +23,10 @@ export function Dashboard() {
   });
 
   const stats = useQuery({
-    queryKey: ["stats", { workspace, windowHours: 24 }],
-    queryFn: () => statsApi.get({ workspace: workspace || undefined, windowHours: 24 }),
+    queryKey: ["stats", { windowHours: 24 }],
+    queryFn: () => statsApi.get({ windowHours: 24 }),
     refetchInterval: STATS_REFETCH_MS,
+    enabled: workspace.isSuccess,
   });
 
   const proxyReachable = health.isSuccess && health.data.status === "ok";
@@ -35,9 +36,9 @@ export function Dashboard() {
       <PageHeader
         title="Dashboard"
         description={
-          workspace
-            ? `Statistieken voor werkruimte "${workspace}" — laatste 24 uur`
-            : "Statistieken over alle werkruimten — laatste 24 uur"
+          workspace.isSuccess
+            ? `Statistieken voor werkruimte "${workspace.data.workspaceName}" — laatste 24 uur`
+            : "Statistieken — laatste 24 uur"
         }
         actions={
           health.isLoading ? (
