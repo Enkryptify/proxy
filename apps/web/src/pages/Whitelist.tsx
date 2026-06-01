@@ -108,10 +108,7 @@ export function Whitelist() {
   if (!workspace.isSuccess) {
     return (
       <>
-        <PageHeader
-          title="Whitelist"
-          description="Goedgekeurde hostnamen per werkruimte."
-        />
+        <PageHeader description="Goedgekeurde hostnamen per werkruimte." />
         <WorkspaceRequired />
       </>
     );

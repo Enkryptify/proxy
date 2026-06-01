@@ -42,7 +42,7 @@ export function Settings() {
   if (!workspace.isSuccess) {
     return (
       <>
-        <PageHeader title="Instellingen" description="Werkruimte-instellingen." />
+        <PageHeader description="Werkruimte-instellingen." />
         <WorkspaceRequired />
       </>
     );
