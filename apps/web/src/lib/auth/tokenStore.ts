@@ -25,7 +25,7 @@ export function getAccessTokenExpiresAt(): number | null {
 }
 
 export function setAccessToken(token: string | null, expiresAt: number | null): void {
-  if (token && expiresAt) {
+  if (token !== null && expiresAt !== null) {
     current = { value: token, expiresAt };
   } else {
     current = null;

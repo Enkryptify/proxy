@@ -25,7 +25,9 @@ export const healthApi = {
 export const statsApi = {
   get: (params: { windowHours?: number; workspace?: string } = {}) => {
     const q = new URLSearchParams();
-    if (params.windowHours) q.set("windowHours", String(params.windowHours));
+    if (params.windowHours !== undefined) {
+      q.set("windowHours", String(params.windowHours));
+    }
     if (params.workspace) q.set("workspace", params.workspace);
     const qs = q.toString();
     return api.get<Stats>(`/api/admin/stats${qs ? `?${qs}` : ""}`);
