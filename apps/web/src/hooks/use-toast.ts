@@ -27,6 +27,7 @@ type State = { toasts: ToasterToast[] };
 
 type Action =
   | { type: "ADD_TOAST"; toast: ToasterToast }
+  | { type: "UPDATE_TOAST"; toast: Partial<ToasterToast> & { id: string } }
   | { type: "DISMISS_TOAST"; toastId?: string }
   | { type: "REMOVE_TOAST"; toastId?: string };
 
@@ -42,6 +43,13 @@ function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_TOAST":
       return { ...state, toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT) };
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t,
+        ),
+      };
     case "DISMISS_TOAST": {
       const { toastId } = action;
       return {
@@ -62,7 +70,7 @@ type ToastInput = Omit<ToasterToast, "id">;
 export function toast(input: ToastInput) {
   const id = genId();
   const update = (props: ToastInput) =>
-    dispatch({ type: "ADD_TOAST", toast: { ...props, id, open: true } });
+    dispatch({ type: "UPDATE_TOAST", toast: { ...props, id } });
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
   dispatch({
