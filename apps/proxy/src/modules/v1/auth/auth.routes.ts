@@ -13,11 +13,11 @@ import {
   sessionResponseSchema,
 } from "./auth.schemas";
 import type AuthService from "./auth.service";
-import type { AuthIssuedSession } from "./auth.service";
+import type { IssuedSession } from "./auth.schemas";
 
 export const REFRESH_COOKIE_NAME = "proxy_refresh";
 
-function setRefreshCookie(c: Context, session: AuthIssuedSession) {
+function setRefreshCookie(c: Context, session: IssuedSession) {
   const maxAge = session.refreshTokenExpiresAt - Math.floor(Date.now() / 1000);
   setCookie(c, REFRESH_COOKIE_NAME, session.refreshToken, {
     httpOnly: true,
@@ -28,12 +28,12 @@ function setRefreshCookie(c: Context, session: AuthIssuedSession) {
   });
 }
 
-function readMeta(c: Context) {
+function readMeta(context: Context) {
   return {
-    userAgent: c.req.header("user-agent") ?? null,
+    userAgent: context.req.header("user-agent") ?? null,
     ipAddress:
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-      c.req.header("x-real-ip") ??
+      context.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
+      context.req.header("x-real-ip") ??
       null,
   };
 }
@@ -86,11 +86,11 @@ const meRoute = createRoute({
 });
 
 export function registerAuthRoutes(app: OpenAPIHono, service: AuthService) {
-  app.openapi(loginRoute, async (c) => {
-    const body = c.req.valid("json");
-    const session = await service.login(body, readMeta(c));
-    setRefreshCookie(c, session);
-    return c.json(
+  app.openapi(loginRoute, async (context) => {
+    const body = context.req.valid("json");
+    const session = await service.login(body, readMeta(context));
+    setRefreshCookie(context, session);
+    return context.json(
       {
         accessToken: session.accessToken,
         accessTokenExpiresAt: session.accessTokenExpiresAt,
@@ -100,11 +100,11 @@ export function registerAuthRoutes(app: OpenAPIHono, service: AuthService) {
     );
   });
 
-  app.openapi(refreshRoute, async (c) => {
-    const raw = getCookie(c, REFRESH_COOKIE_NAME);
-    const session = await service.refresh(raw, readMeta(c));
-    setRefreshCookie(c, session);
-    return c.json(
+  app.openapi(refreshRoute, async (context) => {
+    const raw = getCookie(context, REFRESH_COOKIE_NAME);
+    const session = await service.refresh(raw, readMeta(context));
+    setRefreshCookie(context, session);
+    return context.json(
       {
         accessToken: session.accessToken,
         accessTokenExpiresAt: session.accessTokenExpiresAt,
@@ -114,20 +114,20 @@ export function registerAuthRoutes(app: OpenAPIHono, service: AuthService) {
     );
   });
 
-  app.openapi(logoutRoute, async (c) => {
-    const raw = getCookie(c, REFRESH_COOKIE_NAME);
+  app.openapi(logoutRoute, async (context) => {
+    const raw = getCookie(context, REFRESH_COOKIE_NAME);
     try {
       await service.logout(raw);
-      return c.json({ ok: true as const }, 200);
+      return context.json({ ok: true as const }, 200);
     } finally {
-      deleteCookie(c, REFRESH_COOKIE_NAME, { path: "/api/auth" });
+      deleteCookie(context, REFRESH_COOKIE_NAME, { path: "/api/auth" });
     }
   });
 
   app.use("/api/auth/me", requireAdmin);
-  app.openapi(meRoute, async (c) => {
-    const payload = c.get("user");
+  app.openapi(meRoute, async (context) => {
+    const payload = context.get("user");
     const me = await service.me(payload.sub);
-    return c.json(me, 200);
+    return context.json(me, 200);
   });
 }
