@@ -15,7 +15,8 @@ type ToasterToast = ToastProps & {
 };
 
 const TOAST_LIMIT = 4;
-const TOAST_REMOVE_DELAY = 4_000;
+const TOAST_DISMISS_DELAY = 4_000;
+const TOAST_EXIT_ANIMATION_MS = 300;
 
 let count = 0;
 function genId(): string {
@@ -86,8 +87,11 @@ export function toast(input: ToastInput) {
   });
 
   setTimeout(() => {
-    dispatch({ type: "REMOVE_TOAST", toastId: id });
-  }, TOAST_REMOVE_DELAY);
+    dispatch({ type: "DISMISS_TOAST", toastId: id });
+    setTimeout(() => {
+      dispatch({ type: "REMOVE_TOAST", toastId: id });
+    }, TOAST_EXIT_ANIMATION_MS);
+  }, TOAST_DISMISS_DELAY);
 
   return { id, dismiss, update };
 }
