@@ -8,24 +8,24 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { settingsApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
-import { useSelectedWorkspace } from "@/lib/workspace";
+import { useProxyWorkspace } from "@/lib/workspace";
 
 export function Settings() {
-  const [workspace] = useSelectedWorkspace();
+  const workspace = useProxyWorkspace();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const query = useQuery({
-    queryKey: ["settings", workspace],
-    queryFn: () => settingsApi.get(workspace),
-    enabled: workspace.length > 0,
+    queryKey: ["settings"],
+    queryFn: settingsApi.get,
+    enabled: workspace.isSuccess,
   });
 
   const mutation = useMutation({
-    mutationFn: (enabled: boolean) => settingsApi.update(workspace, enabled),
+    mutationFn: settingsApi.update,
     onSuccess: (data) => {
-      queryClient.setQueryData(["settings", workspace], data);
-      void queryClient.invalidateQueries({ queryKey: ["whitelist", workspace] });
+      queryClient.setQueryData(["settings"], data);
+      void queryClient.invalidateQueries({ queryKey: ["whitelist"] });
       toast({
         title: data.whitelistMode ? "Whitelistmodus ingeschakeld" : "Whitelistmodus uitgeschakeld",
       });
@@ -39,7 +39,7 @@ export function Settings() {
     },
   });
 
-  if (!workspace) {
+  if (!workspace.isSuccess) {
     return (
       <>
         <PageHeader title="Instellingen" description="Werkruimte-instellingen." />
@@ -52,7 +52,7 @@ export function Settings() {
     <div className="space-y-6">
       <PageHeader
         title="Instellingen"
-        description={`Instellingen voor werkruimte "${workspace}".`}
+        description={`Instellingen voor werkruimte "${workspace.data.workspaceName}".`}
       />
 
       <Card>
