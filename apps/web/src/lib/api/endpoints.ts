@@ -51,7 +51,8 @@ export const whitelistApi = {
   list: () => api.get<WhitelistList>("/api/admin/whitelist"),
   add: (hostname: string) =>
     api.post<WhitelistEntry>("/api/admin/whitelist", { hostname }),
-  remove: (id: string) => api.delete<{ ok: true }>(`/api/admin/whitelist/${id}`),
+  remove: (id: string) =>
+    api.delete<{ ok: true }>(`/api/admin/whitelist/${encodeURIComponent(id)}`),
 };
 
 export const settingsApi = {
