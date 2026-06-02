@@ -26,15 +26,15 @@ export function installProxyAuthFetch(): void {
 
     if (input instanceof Request) {
       const merged = new Request(input, init);
-      if (!merged.headers.has("proxy_authentication")) {
-        merged.headers.set("proxy_authentication", proxyKey);
+      if (!merged.headers.has("proxy-authorization")) {
+        merged.headers.set("Proxy-Authorization", proxyKey);
       }
       return originalFetch(merged);
     }
 
     const headers = new Headers(init?.headers);
-    if (!headers.has("proxy_authentication")) {
-      headers.set("proxy_authentication", proxyKey);
+    if (!headers.has("proxy-authorization")) {
+      headers.set("Proxy-Authorization", proxyKey);
     }
     return originalFetch(input, { ...init, headers });
   };
