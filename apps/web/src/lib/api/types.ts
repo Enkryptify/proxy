@@ -42,6 +42,7 @@ export type LogEntry = {
   outcome: "success" | "failure";
   durationMs: number;
   placeholderKeys: string[];
+  errorMessage: string | null;
 };
 
 export type LogsPage = {

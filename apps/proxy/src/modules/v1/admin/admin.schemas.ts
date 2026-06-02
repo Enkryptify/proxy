@@ -52,6 +52,7 @@ export const logEntrySchema = z.object({
   outcome: z.enum(["success", "failure"]),
   durationMs: z.number().int().nonnegative(),
   placeholderKeys: z.array(z.string()),
+  errorMessage: z.string().nullable(),
 });
 
 export const logsResponseSchema = z.object({

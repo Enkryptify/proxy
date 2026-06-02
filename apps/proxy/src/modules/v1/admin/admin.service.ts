@@ -72,6 +72,7 @@ export default class AdminService {
         outcome: tunnel_log.outcome,
         durationMs: tunnel_log.durationMs,
         placeholderKeys: tunnel_log.placeholderKeys,
+        errorMessage: tunnel_log.errorMessage,
       })
       .from(tunnel_log)
       .where(filter)
@@ -91,6 +92,7 @@ export default class AdminService {
         outcome: it.outcome === "success" ? "success" : "failure",
         durationMs: it.durationMs,
         placeholderKeys: it.placeholderKeys ?? [],
+        errorMessage: it.errorMessage ?? null,
       })),
       page: input.page,
       pageSize: input.pageSize,
