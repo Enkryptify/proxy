@@ -7,7 +7,7 @@ import { initDb } from "./plugins/db";
 import { installProxyAuthFetch } from "./lib/proxyAuthFetch";
 
 // When PROXY_KEY is set, every fetch to the Enkryptify vault gets a
-// `proxy_authentication` header injected automatically. Installed once at
+// `Proxy-Authorization` header injected automatically. Installed once at
 // module load so the Enkryptify SDK transparently sends the header.
 installProxyAuthFetch();
 

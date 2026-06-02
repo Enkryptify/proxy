@@ -13,6 +13,9 @@ type WorkspaceListItem = {
   ownerId?: string;
 };
 
+/** Short cap so a hanging vault never blocks proxy hot-path requests indefinitely. */
+const VAULT_FETCH_TIMEOUT_MS = 5_000;
+
 let cached: ProxyWorkspaceIdentity | null = null;
 let inflight: Promise<ProxyWorkspaceIdentity> | null = null;
 
@@ -46,6 +49,9 @@ async function fetchProxyWorkspace(): Promise<ProxyWorkspaceIdentity> {
 
   const url = `${env.ENKRYPTIFY_API_URL.replace(/\/$/, "")}/v1/workspace/`;
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VAULT_FETCH_TIMEOUT_MS);
+
   let res: Response;
   try {
     res = await fetch(url, {
@@ -54,11 +60,19 @@ async function fetchProxyWorkspace(): Promise<ProxyWorkspaceIdentity> {
         Authorization: `Bearer ${env.PROXY_KEY}`,
         Accept: "application/json",
       },
+      signal: controller.signal,
     });
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new BadGatewayError(
+        `Enkryptify vault did not respond within ${VAULT_FETCH_TIMEOUT_MS}ms at ${url}`,
+      );
+    }
     throw new BadGatewayError(
       `Could not reach Enkryptify vault at ${url}: ${err instanceof Error ? err.message : String(err)}`,
     );
+  } finally {
+    clearTimeout(timer);
   }
 
   if (res.status === 401) {
@@ -84,13 +98,8 @@ async function fetchProxyWorkspace(): Promise<ProxyWorkspaceIdentity> {
   if (items.length === 0) {
     throw new BadGatewayError("PROXY_KEY does not grant access to any workspace");
   }
-  if (items.length > 1) {
-    throw new BadGatewayError(
-      `PROXY_KEY must be scoped to exactly one workspace; the vault returned ${items.length}. ` +
-        `Issue a workspace-scoped PROXY_KEY or run one proxy per workspace.`,
-    );
-  }
 
+  // TODO: require a workspace-scoped PROXY_KEY once the vault supports it.
   const w = items[0]!;
   return { workspaceId: w.id, workspaceName: w.name };
 }
