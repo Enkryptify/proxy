@@ -7,8 +7,12 @@ export function ProtectedRoute() {
 
   if (auth.status === "loading") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" role="status">
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
+          aria-hidden
+        />
+        <span className="sr-only">Loading…</span>
       </div>
     );
   }
