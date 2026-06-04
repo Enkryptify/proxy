@@ -15,7 +15,8 @@
     "PROXY_KEY",
     "ENKRYPTIFY_API_URL",
     "VITE_API_BASE_URL",
-    "VITE_PROXY_TARGET"
+    "VITE_PROXY_TARGET",
+    "ENABLE_ADMIN_WEB"
   ],
   "tasks": {
     "dev": {
@@ -25,6 +26,10 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
+    },
+    "build:vercel": {
+      "dependsOn": ["^build"],
+      "outputs": ["api/**"]
     },
     "lint": {
       "dependsOn": ["^build"]

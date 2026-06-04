@@ -1,10 +1,22 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "bunVersion": "1.x",
-  "installCommand": "bun install",
-  "buildCommand": "bun run build:vercel",
+  "installCommand": "cd ../.. && bun install",
+  "buildCommand": "cd ../.. && bun run build:vercel",
   "outputDirectory": ".",
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "rewrites": [
+    { "source": "/api", "destination": "/api" },
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/health", "destination": "/api" },
+    { "source": "/assets/(.*)", "destination": "/public-admin/assets/$1" },
+    { "source": "/logo.svg", "destination": "/public-admin/logo.svg" },
+    { "source": "/login", "destination": "/public-admin/index.html" },
+    { "source": "/whitelist", "destination": "/public-admin/index.html" },
+    { "source": "/logs", "destination": "/public-admin/index.html" },
+    { "source": "/settings", "destination": "/public-admin/index.html" },
+    { "source": "/", "destination": "/public-admin/index.html" },
+    { "source": "/(.*)", "destination": "/api" }
+  ],
   "functions": {
     "api/index.js": {
       "maxDuration": 30

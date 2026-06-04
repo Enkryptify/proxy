@@ -3,8 +3,9 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "node scripts/turbo-dev.mjs",
     "build": "turbo build",
+    "build:vercel": "node scripts/vercel-build.mjs",
     "lint": "turbo lint",
     "oxfmt": "oxlint --fix .",
     "format": "prettier --write .",
