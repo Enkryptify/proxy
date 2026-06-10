@@ -82,10 +82,13 @@ export function Login() {
                 autoFocus
                 disabled={isSubmitting}
                 aria-invalid={errors.email ? true : undefined}
+                aria-describedby={errors.email ? "email-error" : undefined}
                 {...register("email")}
               />
               {errors.email ? (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+                <p id="email-error" className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
               ) : null}
             </div>
             <div className="space-y-2">
@@ -98,10 +101,13 @@ export function Login() {
                 autoComplete="current-password"
                 disabled={isSubmitting}
                 aria-invalid={errors.password ? true : undefined}
+                aria-describedby={errors.password ? "password-error" : undefined}
                 {...register("password")}
               />
               {errors.password ? (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
+                <p id="password-error" className="text-xs text-destructive">
+                  {errors.password.message}
+                </p>
               ) : null}
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>

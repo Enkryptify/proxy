@@ -27,6 +27,7 @@ export function installProxyAuthFetch(): void {
     if (input instanceof Request) {
       const merged = new Request(input, init);
       if (!merged.headers.has("proxy-authorization")) {
+        // Enkryptify vault expects the proxy key on vault-origin requests only.
         merged.headers.set("Proxy-Authorization", proxyKey);
       }
       return originalFetch(merged);
@@ -39,13 +40,19 @@ export function installProxyAuthFetch(): void {
     return originalFetch(input, { ...init, headers });
   };
 
-  for (const key of Object.keys(originalFetch) as Array<keyof typeof originalFetch>) {
-    (patched as unknown as Record<string, unknown>)[key as string] =
-      (originalFetch as unknown as Record<string, unknown>)[key as string];
-  }
+  copyFetchStatics(patched, originalFetch);
 
   globalThis.fetch = patched as typeof fetch;
   installed = true;
+}
+
+/** Bun/Node may attach extra properties on `fetch`; preserve them after patching. */
+function copyFetchStatics(patched: typeof fetch, original: typeof fetch): void {
+  for (const key of Object.keys(original) as Array<keyof typeof original>) {
+    (patched as unknown as Record<string, unknown>)[key as string] = (
+      original as unknown as Record<string, unknown>
+    )[key as string];
+  }
 }
 
 function isVaultRequest(input: Parameters<typeof fetch>[0], vaultOrigin: string): boolean {

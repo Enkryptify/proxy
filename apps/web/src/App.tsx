@@ -17,7 +17,8 @@ function makeQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 15_000,
+        staleTime: 5 * 60_000,
+        gcTime: 60 * 60_000,
         refetchOnWindowFocus: false,
         retry: (failureCount, error) => {
           // Don't retry auth / authorization / 4xx — they aren't transient.

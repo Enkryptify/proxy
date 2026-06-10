@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Link } from "react-router-dom";
 import { ArrowRight, Loader2, Plus, ShieldOff, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -23,19 +22,11 @@ import { useToast } from "@/hooks/use-toast";
 import { whitelistApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatRelative } from "@/lib/format";
+import { hostnameFieldSchema } from "@/lib/hostname";
 import { useProxyWorkspace } from "@/lib/workspace";
+import { z } from "zod";
 
-const hostnameSchema = z.object({
-  hostname: z
-    .string()
-    .trim()
-    .min(1, "Enter a hostname")
-    .max(253)
-    .regex(
-      /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63})+$/,
-      "Not a valid hostname",
-    ),
-});
+const hostnameSchema = z.object({ hostname: hostnameFieldSchema });
 type HostnameForm = z.infer<typeof hostnameSchema>;
 
 export function Whitelist() {
