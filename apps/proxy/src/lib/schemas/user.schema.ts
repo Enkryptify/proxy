@@ -1,14 +1,20 @@
+import { sql } from "drizzle-orm";
 import { baseModel, createTable } from "./general";
-import { varchar, uuid, boolean, timestamp, text } from "drizzle-orm/pg-core";
+import { check, varchar, uuid, boolean, timestamp, text } from "drizzle-orm/pg-core";
 
-export const user = createTable("user", {
+export const user = createTable(
+  "user",
+  {
     ...baseModel,
     userId: uuid("user_id").notNull().unique(),
     email: varchar("email", { length: 255 }).notNull().unique(),
     username: varchar("username", { length: 255 }).notNull().unique(),
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     password: varchar("password", { length: 255 }).notNull(),
-});
+    role: varchar("role", { length: 32 }).notNull().default("user").$type<"user" | "admin">(),
+  },
+  (table) => [check("user_role_check", sql`${table.role} IN ('user', 'admin')`)],
+);
 
 export const refreshToken = createTable("refresh_token", {
     ...baseModel,
