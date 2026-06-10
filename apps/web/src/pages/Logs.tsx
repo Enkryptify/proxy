@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceRequired } from "@/components/WorkspaceRequired";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,12 +36,19 @@ export function Logs() {
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const workspaceId = workspace.data?.workspaceId;
+
   const query = useQuery({
-    queryKey: ["logs", { page, pageSize: PAGE_SIZE }],
+    queryKey: ["logs", workspaceId, page, PAGE_SIZE],
     queryFn: () => logsApi.list({ page, pageSize: PAGE_SIZE }),
     placeholderData: keepPreviousData,
     enabled: workspace.isSuccess,
   });
+
+  useEffect(() => {
+    setPage(1);
+    setExpandedId(null);
+  }, [workspaceId]);
 
   useEffect(() => {
     setExpandedId(null);
@@ -49,15 +57,26 @@ export function Logs() {
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  if (!workspace.isSuccess) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Logs" description="Recent proxy traffic" />
+        <WorkspaceRequired />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Logs"
-        description={
-          workspace.isSuccess
-            ? `Recent proxy traffic for workspace "${workspace.data.workspaceName}"`
-            : "Recent proxy traffic"
-        }
+        description={`Recent proxy traffic for workspace "${workspace.data.workspaceName}"`}
         actions={
           <Button
             size="sm"
@@ -118,7 +137,6 @@ export function Logs() {
         </CardContent>
       </Card>
 
-      {/* pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div>
           {query.isSuccess
@@ -159,20 +177,27 @@ function LogRow({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const detailsId = `log-details-${row.id}`;
+
   return (
     <>
-      <TableRow
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        className={cn("cursor-pointer", isOpen && "bg-muted/40")}
-      >
+      <TableRow className={cn(isOpen && "bg-muted/40")}>
         <TableCell className="pr-0 text-muted-foreground">
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 transition-transform",
-              isOpen ? "rotate-0" : "-rotate-90",
-            )}
-          />
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={isOpen}
+            aria-controls={detailsId}
+            aria-label={isOpen ? "Collapse log details" : "Expand log details"}
+            className="rounded-md p-1 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 transition-transform",
+                isOpen ? "rotate-0" : "-rotate-90",
+              )}
+            />
+          </button>
         </TableCell>
         <TableCell className="whitespace-nowrap text-muted-foreground">
           {formatDateTime(row.createdAt)}
@@ -200,7 +225,7 @@ function LogRow({
         </TableCell>
       </TableRow>
       {isOpen && (
-        <TableRow className="bg-muted/20 hover:bg-muted/20">
+        <TableRow id={detailsId} className="bg-muted/20 hover:bg-muted/20">
           <TableCell colSpan={7} className="p-4">
             <LogDetails row={row} />
           </TableCell>

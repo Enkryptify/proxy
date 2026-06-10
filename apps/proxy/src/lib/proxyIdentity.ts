@@ -16,7 +16,10 @@ type WorkspaceListItem = {
 /** Short cap so a hanging vault never blocks proxy hot-path requests indefinitely. */
 const VAULT_FETCH_TIMEOUT_MS = 5_000;
 
+/** Resolved workspace kept in memory for the process lifetime. */
 let cached: ProxyWorkspaceIdentity | null = null;
+
+/** Merges concurrent callers into a single in-flight vault request. */
 let inflight: Promise<ProxyWorkspaceIdentity> | null = null;
 
 export function clearProxyIdentityCache(): void {

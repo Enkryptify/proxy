@@ -30,10 +30,10 @@ export const env = createEnv({
           .map((s) => s.trim())
           .filter(Boolean),
       ),
-    /** HMAC secret for short-lived access tokens. Required when the admin panel is used. */
-    JWT_ACCESS_SECRET: z.string().min(16).default("dev-only-access-secret-change-me"),
-    /** HMAC secret for long-lived refresh tokens. Different from JWT_ACCESS_SECRET. */
-    JWT_REFRESH_SECRET: z.string().min(16).default("dev-only-refresh-secret-change-me"),
+    /** HMAC secret for short-lived access tokens. Required — inject via Enkryptify (`ek run`). */
+    JWT_ACCESS_SECRET: z.string().min(32),
+    /** HMAC secret for long-lived refresh tokens. Must differ from JWT_ACCESS_SECRET. */
+    JWT_REFRESH_SECRET: z.string().min(32),
     JWT_ACCESS_TTL_SECONDS: z
       .string()
       .default(String(minutes(15)))

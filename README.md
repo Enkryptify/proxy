@@ -4,7 +4,7 @@ Enkryptify secret-injecting HTTP proxy. Built with [Hono](https://hono.dev) on [
 
 ## Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FEnkryptify%2Fproxy&project-name=enkryptify-proxy&repository-name=enkryptify-proxy&root-directory=apps%2Fproxy&env=DATABASE_URL,DATABASE_LOGGING,DATABASE_MIGRATE_ON_START,PROXY_KEY,JWT_ACCESS_SECRET,JWT_REFRESH_SECRET,ENABLE_ADMIN_WEB&envDescription=See%20apps%2Fproxy%2F.env.example%20%E2%80%94%20set%20ENABLE_ADMIN_WEB%3Dfalse%20for%20proxy-only.&envLink=https%3A%2F%2Fgithub.com%2FEnkryptify%2Fproxy%2Fblob%2Fmain%2Fapps%2Fproxy%2F.env.example)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FEnkryptify%2Fproxy&project-name=enkryptify-proxy&repository-name=enkryptify-proxy&root-directory=apps%2Fproxy&env=DATABASE_URL,DATABASE_LOGGING,DATABASE_MIGRATE_ON_START,PROXY_KEY,JWT_ACCESS_SECRET,JWT_REFRESH_SECRET,ENABLE_ADMIN_WEB&envDescription=Set%20ENABLE_ADMIN_WEB%3Dfalse%20for%20proxy-only.%20Inject%20secrets%20via%20Enkryptify.)
 
 Runs on Vercel's Bun runtime via [`bunVersion: 1.x`](https://bun.com/docs/guides/deployment/vercel) in `apps/proxy/vercel.json`.
 
@@ -14,7 +14,7 @@ Runs on Vercel's Bun runtime via [`bunVersion: 1.x`](https://bun.com/docs/guides
 |--------|--------|
 | Root Directory | `apps/proxy` |
 | Install / Build | Handled by `vercel.json` (`cd ../.. && bun install` / `bun run build:vercel`) |
-| Production branch | Use `14-chore-vercel-monorepo-deploy` (or `main` after merge) — must include the full admin panel stack (`12-web-app-entry`+) |
+| Production branch | `main` (after the stacked PRs are merged) |
 
 The monorepo build (`bun run build:vercel` from the repo root) uses Turbo to:
 
@@ -28,31 +28,36 @@ The monorepo build (`bun run build:vercel` from the repo root) uses Turbo to:
 | unset or `true` | Proxy + admin panel on the same domain (`/login`, `/`, `/api/*`, proxy tunnel on `/{workspace}/…`) |
 | `false` | Proxy only (all traffic routes to the Bun handler via the catch-all rewrite) |
 
-When the panel is enabled, set `ADMIN_WEB_ORIGINS` to your Vercel URL (e.g. `https://your-app.vercel.app`), `COOKIE_SECURE=true`, and the JWT / `PROXY_KEY` vars from `apps/proxy/.env.example`.
+When the panel is enabled, set `ADMIN_WEB_ORIGINS` to your Vercel URL (e.g. `https://your-app.vercel.app`), `COOKIE_SECURE=true`, and inject `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `PROXY_KEY`, and `DATABASE_URL` via Enkryptify.
 
 ## Local development
+
+Configure secrets through [Enkryptify](https://docs.enkryptify.com/cli/quickstart) — do not commit `.env` files:
 
 ```sh
 # From the monorepo root:
 bun install
-cp apps/proxy/.env.example apps/proxy/.env   # DATABASE_URL, JWT_*_SECRET, PROXY_KEY
-bun run db:migrate
-bun run admin:create -- --email you@example.com --username you --password '<strong>'
+ek run -- bun run db:migrate
+ek run -- bun run admin:create -- --email you@example.com --username you --password '<strong>'
 
-bun run dev                                  # proxy :3000 + panel :5173
-ENABLE_ADMIN_WEB=false bun run dev           # proxy only
+ek run -- bun run dev                                  # proxy :3000 + panel :5173
+ENABLE_ADMIN_WEB=false ek run -- bun run dev           # proxy only
 ```
 
-Health check: `curl http://localhost:3000/health`
+Required proxy env vars (injected by `ek run` or your secret store):
 
-> Using Enkryptify? Prefix commands with `ek run` so vault secrets reach the env.
+- `DATABASE_URL` — PostgreSQL connection string
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — min. 32 characters each, must differ
+- `PROXY_KEY` — Enkryptify API token for vault workspace resolve
+
+Health check: `curl http://localhost:3000/health`
 
 ## Manual deploy
 
 ```sh
 bun install
-bun run build:vercel
-ENABLE_ADMIN_WEB=false bun run build:vercel   # proxy only
+ek run -- bun run build:vercel
+ENABLE_ADMIN_WEB=false ek run -- bun run build:vercel   # proxy only
 
 cd apps/proxy && bunx vercel deploy --prod
 ```

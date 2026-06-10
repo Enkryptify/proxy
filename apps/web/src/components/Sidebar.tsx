@@ -62,7 +62,7 @@ export function Sidebar() {
 
       <div className="px-4">
         <div className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-tight-wide text-muted-foreground">
-          Workspace
+          Navigation
         </div>
         <nav className="flex flex-col gap-px">
           {navItems.map(({ to, label, icon: Icon, end }) => (

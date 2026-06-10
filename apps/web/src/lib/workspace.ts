@@ -9,9 +9,6 @@ export function useProxyWorkspace() {
     queryKey: ["workspace", "me"],
     queryFn: workspaceApi.me,
     enabled: auth.status === "authenticated",
-    staleTime: 5 * 60_000,
-    gcTime: 60 * 60_000,
     retry: false,
-    refetchOnWindowFocus: false,
   });
 }
