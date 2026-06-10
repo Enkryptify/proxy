@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { baseModel, createTable } from "./general";
 import { check, varchar, uuid, boolean, timestamp, text } from "drizzle-orm/pg-core";
+import type { UserRole } from "@/modules/v1/auth/auth.schemas";
 
 export const user = createTable(
   "user",
@@ -11,7 +12,7 @@ export const user = createTable(
     username: varchar("username", { length: 255 }).notNull().unique(),
     mustChangePassword: boolean("must_change_password").notNull().default(false),
     password: varchar("password", { length: 255 }).notNull(),
-    role: varchar("role", { length: 32 }).notNull().default("user").$type<"user" | "admin">(),
+    role: varchar("role", { length: 32 }).notNull().default("user").$type<UserRole>(),
   },
   (table) => [check("user_role_check", sql`${table.role} IN ('user', 'admin')`)],
 );

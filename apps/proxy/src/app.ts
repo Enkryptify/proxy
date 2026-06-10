@@ -4,6 +4,12 @@ import { requestLogger } from "./lib/middleware/logger";
 import { errorHandler } from "./lib/middleware/errorHandler";
 import { registerModules } from "./modules";
 import { initDb } from "./plugins/db";
+import { installProxyAuthFetch } from "./lib/proxyAuthFetch";
+
+// When PROXY_KEY is set, every fetch to the Enkryptify vault gets a
+// `Proxy-Authorization` header injected automatically. Installed once at
+// module load so the Enkryptify SDK transparently sends the header.
+installProxyAuthFetch();
 
 const app = new OpenAPIHono();
 

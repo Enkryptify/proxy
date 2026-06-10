@@ -13,8 +13,16 @@ const getHealthRoute = createRoute({
   },
 });
 
+const getApiHealthRoute = createRoute({
+  method: "get",
+  path: "/api/health",
+  tags: ["health"],
+  responses: {
+    200: jsonContent(healthResponseSchema, "Health status (admin-panel alias)"),
+  },
+});
+
 export function registerHealthRoutes(app: OpenAPIHono, service: HealthService) {
-  app.openapi(getHealthRoute, (c) => {
-    return c.json(service.getStatus(), 200);
-  });
+  app.openapi(getHealthRoute, (c) => c.json(service.getStatus(), 200));
+  app.openapi(getApiHealthRoute, (c) => c.json(service.getStatus(), 200));
 }
