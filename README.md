@@ -4,7 +4,7 @@ Enkryptify secret-injecting HTTP proxy. Built with [Hono](https://hono.dev) on [
 
 ## Deploy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FEnkryptify%2Fproxy&project-name=enkryptify-proxy&repository-name=enkryptify-proxy&root-directory=apps%2Fproxy&env=DATABASE_URL,DATABASE_LOGGING,DATABASE_MIGRATE_ON_START,PROXY_KEY,JWT_ACCESS_SECRET,JWT_REFRESH_SECRET,ENABLE_ADMIN_WEB&envDescription=Set%20ENABLE_ADMIN_WEB%3Dfalse%20for%20proxy-only.%20Inject%20secrets%20via%20Enkryptify.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FEnkryptify%2Fproxy&project-name=enkryptify-proxy&repository-name=enkryptify-proxy&root-directory=apps%2Fproxy&env=DATABASE_URL,DATABASE_LOGGING,DATABASE_MIGRATE_ON_START,PROXY_KEY,ENKRYPTIFY_API_URL,JWT_ACCESS_SECRET,JWT_REFRESH_SECRET,JWT_ACCESS_TTL_SECONDS,JWT_REFRESH_TTL_SECONDS,ADMIN_WEB_ORIGINS,COOKIE_SECURE,ENABLE_ADMIN_WEB,NODE_ENV,PORT&envDescription=Replace%20placeholder%20secrets%20before%20deploying.%20Set%20ENABLE_ADMIN_WEB%3Dfalse%20for%20proxy-only%20(no%20dashboard).%20Set%20ADMIN_WEB_ORIGINS%20to%20your%20Vercel%20URL%20when%20the%20panel%20is%20enabled.&envDefaults=%7B%22DATABASE_URL%22%3A%22postgres%3A%2F%2Fuser%3Apassword%40ep-example.region.aws.neon.tech%3A5432%2Fproxy%3Fsslmode%3Drequire%22%2C%22DATABASE_LOGGING%22%3A%22true%22%2C%22DATABASE_MIGRATE_ON_START%22%3A%22true%22%2C%22PROXY_KEY%22%3A%22ek_live_replace_with_your_enkryptify_token%22%2C%22ENKRYPTIFY_API_URL%22%3A%22https%3A%2F%2Fapi.enkryptify.com%22%2C%22JWT_ACCESS_SECRET%22%3A%22replace-with-a-random-32-character-string%22%2C%22JWT_REFRESH_SECRET%22%3A%22replace-with-a-different-32-char-string%22%2C%22JWT_ACCESS_TTL_SECONDS%22%3A%22900%22%2C%22JWT_REFRESH_TTL_SECONDS%22%3A%222592000%22%2C%22ADMIN_WEB_ORIGINS%22%3A%22https%3A%2F%2Fenkryptify-proxy.vercel.app%22%2C%22COOKIE_SECURE%22%3A%22true%22%2C%22ENABLE_ADMIN_WEB%22%3A%22true%22%2C%22NODE_ENV%22%3A%22production%22%2C%22PORT%22%3A%223000%22%7D)
 
 Runs on Vercel's Bun runtime via [`bunVersion: 1.x`](https://bun.com/docs/guides/deployment/vercel) in `apps/proxy/vercel.json`.
 
@@ -14,21 +14,42 @@ Runs on Vercel's Bun runtime via [`bunVersion: 1.x`](https://bun.com/docs/guides
 |--------|--------|
 | Root Directory | `apps/proxy` |
 | Install / Build | Handled by `vercel.json` (`cd ../.. && bun install` / `bun run build:vercel`) |
-| Production branch | `main` (after the stacked PRs are merged) |
+| Production branch | `main` |
 
-The monorepo build (`bun run build:vercel` from the repo root) uses Turbo to:
+The Deploy button pre-fills every environment variable below. **Replace the placeholder secrets** (`DATABASE_URL`, `PROXY_KEY`, `JWT_*`) before going live.
 
-1. Always bundle the proxy → `apps/proxy/api/index.js`
-2. Optionally build the admin SPA → `apps/proxy/public-admin/` when `ENABLE_ADMIN_WEB` is not `false`
+### Environment variables
 
-**`ENABLE_ADMIN_WEB`** (Vercel → Environment Variables)
+| Variable | Example | Required | Description |
+|----------|---------|:--------:|-------------|
+| `DATABASE_URL` | `postgres://user:pass@host:5432/proxy?sslmode=require` | Yes (admin panel) | PostgreSQL for users, whitelist, tunnel logs |
+| `DATABASE_LOGGING` | `true` | No | Write tunnel requests to `tunnel_log` |
+| `DATABASE_MIGRATE_ON_START` | `true` | No | Run Drizzle migrations on cold start |
+| `PROXY_KEY` | `ek_live_…` | Yes (admin + vault) | Enkryptify API token — resolves workspace |
+| `ENKRYPTIFY_API_URL` | `https://api.enkryptify.com` | No | Vault base URL |
+| `JWT_ACCESS_SECRET` | `random-32+-char-string` | Yes (admin panel) | HMAC secret for access tokens (min. 32 chars) |
+| `JWT_REFRESH_SECRET` | `different-32+-char-string` | Yes (admin panel) | HMAC secret for refresh tokens — must differ |
+| `JWT_ACCESS_TTL_SECONDS` | `900` | No | Access token lifetime (default 15 min) |
+| `JWT_REFRESH_TTL_SECONDS` | `2592000` | No | Refresh cookie lifetime (default 30 days) |
+| `ADMIN_WEB_ORIGINS` | `https://enkryptify-proxy.vercel.app` | Yes (admin panel) | CORS + cookie origin(s), comma-separated |
+| `COOKIE_SECURE` | `true` | Yes (Vercel) | `httpOnly` refresh cookie only over HTTPS |
+| `ENABLE_ADMIN_WEB` | `true` or `false` | No | Build and serve the admin dashboard (see below) |
+| `NODE_ENV` | `production` | No | Set automatically on Vercel |
+| `PORT` | `3000` | No | Local default; ignored on Vercel serverless |
+
+### Admin dashboard toggle (`ENABLE_ADMIN_WEB`)
 
 | Value | Result |
 |-------|--------|
-| unset or `true` | Proxy + admin panel on the same domain (`/login`, `/`, `/api/*`, proxy tunnel on `/{workspace}/…`) |
-| `false` | Proxy only (all traffic routes to the Bun handler via the catch-all rewrite) |
+| `true` (default in Deploy button) | Proxy **+** admin panel on one domain (`/`, `/login`, `/api/*`, tunnel on `/{workspace}/…`) |
+| `false` | **Proxy only** — no SPA build; all routes hit the Bun handler |
 
-When the panel is enabled, set `ADMIN_WEB_ORIGINS` to your Vercel URL (e.g. `https://your-app.vercel.app`), `COOKIE_SECURE=true`, and inject `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `PROXY_KEY`, and `DATABASE_URL` via Enkryptify.
+When the panel is enabled, update `ADMIN_WEB_ORIGINS` to your real Vercel URL after the first deploy.
+
+The monorepo build (`bun run build:vercel`) uses Turbo to:
+
+1. Always bundle the proxy → `apps/proxy/api/index.js`
+2. Optionally build the admin SPA → `apps/proxy/public-admin/` when `ENABLE_ADMIN_WEB` is not `false`
 
 ## Local development
 
@@ -44,12 +65,6 @@ ek run -- bun run dev                                  # proxy :3000 + panel :51
 ENABLE_ADMIN_WEB=false ek run -- bun run dev           # proxy only
 ```
 
-Required proxy env vars (injected by `ek run` or your secret store):
-
-- `DATABASE_URL` — PostgreSQL connection string
-- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — min. 32 characters each, must differ
-- `PROXY_KEY` — Enkryptify API token for vault workspace resolve
-
 Health check: `curl http://localhost:3000/health`
 
 ## Manual deploy
@@ -64,7 +79,7 @@ cd apps/proxy && bunx vercel deploy --prod
 
 ## Admin panel (`apps/web`)
 
-React/Vite SPA that talks to the proxy via `/api/auth/*` and `/api/admin/*`. The
+React/Vite SPA with **Tailwind CSS v4** (`@tailwindcss/vite`). Talks to the proxy via `/api/auth/*` and `/api/admin/*`. The
 JWT lives only in memory (never `localStorage`/`sessionStorage`); a 30-day
 `httpOnly` refresh cookie restores the session on cold start and a silent refresh
 runs 60s before the access token expires.
