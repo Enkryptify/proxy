@@ -83,3 +83,7 @@ export type WorkspaceIdentity = {
 export type ApiErrorBody = {
   error: string;
 };
+
+export type SetupStatus = {
+  needsSetup: boolean;
+};

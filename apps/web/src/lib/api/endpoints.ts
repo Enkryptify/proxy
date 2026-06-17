@@ -3,6 +3,7 @@ import type {
   HealthStatus,
   LogsPage,
   SessionResponse,
+  SetupStatus,
   Stats,
   User,
   WhitelistEntry,
@@ -17,6 +18,9 @@ export const authApi = {
   refresh: () => api.post<SessionResponse>("/api/auth/refresh"),
   logout: () => api.post<{ ok: true }>("/api/auth/logout"),
   me: () => api.get<User>("/api/auth/me"),
+  setupStatus: () => api.get<SetupStatus>("/api/auth/setup-status"),
+  bootstrap: (email: string, username: string, password: string) =>
+    api.post<SessionResponse>("/api/auth/bootstrap", { email, username, password }),
 };
 
 export const healthApi = {

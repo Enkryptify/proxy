@@ -13,6 +13,7 @@ type AuthState =
 
 type AuthContextValue = AuthState & {
   login: (email: string, password: string) => Promise<void>;
+  bootstrap: (email: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -107,6 +108,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [clearTimer, runRefresh]);
 
+  const bootstrap = useCallback(async (email: string, username: string, password: string) => {
+    bumpAuthEpoch();
+    try {
+      const session = await authApi.bootstrap(email, username, password);
+      setAccessToken(session.accessToken, session.accessTokenExpiresAt);
+      setState({ status: "authenticated", user: session.user });
+      clearTimer();
+      refreshTimer.current = setTimeout(
+        () => void runRefresh(),
+        msUntilSilentRefresh(session.accessTokenExpiresAt),
+      );
+    } catch (err) {
+      setAccessToken(null, null);
+      setState({ status: "unauthenticated", user: null });
+      if (err instanceof ApiError) throw err;
+      throw new ApiError(0, "Network error", null);
+    }
+  }, [clearTimer, runRefresh]);
+
   const logout = useCallback(async () => {
     bumpAuthEpoch();
     clearTimer();
@@ -119,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: "unauthenticated", user: null });
   }, [clearTimer]);
 
-  const value: AuthContextValue = { ...state, login, logout };
+  const value: AuthContextValue = { ...state, login, bootstrap, logout };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

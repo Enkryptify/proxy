@@ -1,4 +1,4 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/plugins/db";
 import { refreshToken, user } from "@/lib/schemas";
 import {
@@ -12,7 +12,10 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "@/lib/utils/tokens";
-import type { IssuedSession, LoginRequest, MeResponse, UserRole } from "./auth.schemas";
+import type { BootstrapRequest, IssuedSession, LoginRequest, MeResponse, SetupStatus, UserRole } from "./auth.schemas";
+
+/** Serialize first-user bootstrap across concurrent requests. */
+const SETUP_ADVISORY_LOCK_KEY = 0x505853;
 
 function assertDb() {
   if (!db) {
@@ -127,6 +130,58 @@ export default class AuthService {
       username: row.username,
       role: row.role,
     };
+  }
+
+  async setupStatus(): Promise<SetupStatus> {
+    const database = assertDb();
+    const existing = await database.query.user.findFirst({ columns: { id: true } });
+    return { needsSetup: !existing };
+  }
+
+  async bootstrap(
+    input: BootstrapRequest,
+    meta: { userAgent: string | null; ipAddress: string | null },
+  ): Promise<IssuedSession> {
+    const database = assertDb();
+    await database.execute(sql`SELECT pg_advisory_lock(${SETUP_ADVISORY_LOCK_KEY})`);
+    try {
+      const existing = await database.query.user.findFirst({ columns: { id: true } });
+      if (existing) {
+        throw new ForbiddenError("An admin account already exists");
+      }
+
+      const passwordHash = await Bun.password.hash(input.password, {
+        algorithm: "argon2id",
+      });
+      const [row] = await database
+        .insert(user)
+        .values({
+          userId: crypto.randomUUID(),
+          email: input.email.toLowerCase(),
+          username: input.username,
+          password: passwordHash,
+          role: "admin",
+          mustChangePassword: false,
+        })
+        .returning({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          role: user.role,
+        });
+
+      return this.#issueSession(
+        {
+          sub: row.id,
+          email: row.email,
+          username: row.username,
+          role: row.role,
+        },
+        meta,
+      );
+    } finally {
+      await database.execute(sql`SELECT pg_advisory_unlock(${SETUP_ADVISORY_LOCK_KEY})`);
+    }
   }
 
   async #issueSession(

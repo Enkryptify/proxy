@@ -38,8 +38,20 @@ export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
 
+export const setupStatusSchema = z.object({
+  needsSetup: z.boolean(),
+});
+
+export const bootstrapRequestSchema = z.object({
+  email: z.email(),
+  username: z.string().min(1).max(255),
+  password: z.string().min(8),
+});
+
 export type UserRole = z.infer<typeof userRoleSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type MeResponse = z.infer<typeof meSchema>;
 export type IssuedSession = z.infer<typeof issuedSessionSchema>;
+export type SetupStatus = z.infer<typeof setupStatusSchema>;
+export type BootstrapRequest = z.infer<typeof bootstrapRequestSchema>;
