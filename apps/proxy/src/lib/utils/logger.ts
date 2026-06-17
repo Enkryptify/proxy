@@ -3,16 +3,23 @@ import fs from "node:fs";
 import { createLogger, format, transports } from "winston";
 import { env } from "@/config/env";
 
-const logDir = path.resolve(process.cwd(), "logs");
-let canUseFileTransport = true;
-try {
-  fs.mkdirSync(logDir, { recursive: true });
-} catch (err) {
-  canUseFileTransport = false;
-  console.error("[logger] Failed to create logs directory, falling back to console-only logging.", err);
+/** Vercel/Lambda have a read-only filesystem — never write log files there. */
+function canWriteLogFiles(): boolean {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return false;
+  }
+
+  const logDir = path.resolve(process.cwd(), "logs");
+  try {
+    fs.mkdirSync(logDir, { recursive: true });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-const filePath = path.join(logDir, "proxy.log");
+const useFileTransport = canWriteLogFiles();
+const filePath = path.resolve(process.cwd(), "logs", "proxy.log");
 
 const MAX_STRING_LOG_LEN = 2_000;
 const SENSITIVE_KEY_NAMES = new Set([
@@ -122,7 +129,7 @@ const loggerTransports: Array<
   }),
 ];
 
-if (canUseFileTransport) {
+if (useFileTransport) {
   loggerTransports.push(
     new transports.File({
       filename: filePath,
@@ -143,4 +150,3 @@ export const logger = createLogger({
   ),
   transports: loggerTransports,
 });
-
