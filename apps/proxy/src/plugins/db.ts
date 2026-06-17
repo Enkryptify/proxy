@@ -2,9 +2,8 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import fs from "node:fs";
-import path from "node:path";
 import { env } from "@/config/env";
+import { resolveMigrationsFolder } from "@/lib/resolveMigrationsFolder";
 import { logger } from "@/lib/utils/logger";
 import * as schema from "@/lib/schemas";
 
@@ -32,12 +31,11 @@ export async function initDb(): Promise<void> {
           return;
         }
 
-        const migrationsFolder = path.resolve(process.cwd(), "drizzle");
-        if (!fs.existsSync(migrationsFolder)) {
-          logger.error(
-            `[db] migrations folder not found at ${migrationsFolder} (cwd=${process.cwd()}) — cannot migrate`,
+        const migrationsFolder = resolveMigrationsFolder();
+        if (!migrationsFolder) {
+          throw new Error(
+            `[db] migrations folder not found (cwd=${process.cwd()}, bundleDir=${import.meta.dir})`,
           );
-          return;
         }
 
         logger.info(`[db] running migrations from ${migrationsFolder}`);
