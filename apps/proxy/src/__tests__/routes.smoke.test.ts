@@ -17,6 +17,8 @@ describe("route registration (smoke)", () => {
     { method: "GET", path: "/api/health", expectedAny: [200] },
     // Auth endpoints: 400 (Zod) or 401 (missing cookie/header) both mean the route is mounted.
     { method: "POST", path: "/api/auth/login", expectedAny: [400, 502] },
+    { method: "GET", path: "/api/auth/setup-status", expectedAny: [200, 502] },
+    { method: "POST", path: "/api/auth/bootstrap", expectedAny: [400, 403, 502] },
     { method: "POST", path: "/api/auth/refresh", expectedAny: [401, 502] },
     { method: "POST", path: "/api/auth/logout", expectedAny: [200] },
     { method: "GET", path: "/api/auth/me", expectedAny: [401] },

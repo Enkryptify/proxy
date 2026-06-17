@@ -7,10 +7,12 @@ import { env } from "@/config/env";
 import { requireAdmin } from "@/lib/middleware/requireAdmin";
 import {
   authErrorSchema,
+  bootstrapRequestSchema,
   loginRequestSchema,
   logoutResponseSchema,
   meSchema,
   sessionResponseSchema,
+  setupStatusSchema,
 } from "./auth.schemas";
 import type AuthService from "./auth.service";
 import type { IssuedSession } from "./auth.schemas";
@@ -85,7 +87,50 @@ const meRoute = createRoute({
   },
 });
 
+const setupStatusRoute = createRoute({
+  method: "get",
+  path: "/api/auth/setup-status",
+  tags: ["auth"],
+  responses: {
+    200: jsonContent(setupStatusSchema, "Whether the first admin must be created"),
+    502: jsonContent(authErrorSchema, "Auth backend unavailable"),
+  },
+});
+
+const bootstrapRoute = createRoute({
+  method: "post",
+  path: "/api/auth/bootstrap",
+  tags: ["auth"],
+  request: {
+    body: jsonBody(bootstrapRequestSchema),
+  },
+  responses: {
+    200: jsonContent(sessionResponseSchema, "First admin created and session issued"),
+    403: jsonContent(authErrorSchema, "Setup already completed"),
+    502: jsonContent(authErrorSchema, "Auth backend unavailable"),
+  },
+});
+
 export function registerAuthRoutes(app: OpenAPIHono, service: AuthService) {
+  app.openapi(setupStatusRoute, async (context) => {
+    const status = await service.setupStatus();
+    return context.json(status, 200);
+  });
+
+  app.openapi(bootstrapRoute, async (context) => {
+    const body = context.req.valid("json");
+    const session = await service.bootstrap(body, readMeta(context));
+    setRefreshCookie(context, session);
+    return context.json(
+      {
+        accessToken: session.accessToken,
+        accessTokenExpiresAt: session.accessTokenExpiresAt,
+        user: session.user,
+      },
+      200,
+    );
+  });
+
   app.openapi(loginRoute, async (context) => {
     const body = context.req.valid("json");
     const session = await service.login(body, readMeta(context));

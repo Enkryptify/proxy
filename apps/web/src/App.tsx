@@ -5,11 +5,13 @@ import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/Toaster";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { ProtectedRoute } from "@/lib/auth/ProtectedRoute";
+import { SetupGate } from "@/lib/auth/SetupGate";
 import { ApiError } from "@/lib/api/client";
 import { Dashboard } from "@/pages/Dashboard";
 import { Logs } from "@/pages/Logs";
 import { Login } from "@/pages/Login";
 import { NotFound } from "@/pages/NotFound";
+import { Setup } from "@/pages/Setup";
 import { Settings } from "@/pages/Settings";
 import { Whitelist } from "@/pages/Whitelist";
 
@@ -39,19 +41,22 @@ export function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppShell />}>
-                <Route index element={<Dashboard />} />
-                <Route path="whitelist" element={<Whitelist />} />
-                <Route path="logs" element={<Logs />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="*" element={<NotFound />} />
+          <SetupGate>
+            <Routes>
+              <Route path="/setup" element={<Setup />} />
+              <Route path="/login" element={<Login />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AppShell />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="whitelist" element={<Whitelist />} />
+                  <Route path="logs" element={<Logs />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
               </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </SetupGate>
         </AuthProvider>
       </BrowserRouter>
       <Toaster />

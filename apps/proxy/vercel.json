@@ -11,6 +11,7 @@
     { "source": "/assets/(.*)", "destination": "/public-admin/assets/$1" },
     { "source": "/logo.svg", "destination": "/public-admin/logo.svg" },
     { "source": "/login", "destination": "/public-admin/index.html" },
+    { "source": "/setup", "destination": "/public-admin/index.html" },
     { "source": "/whitelist", "destination": "/public-admin/index.html" },
     { "source": "/logs", "destination": "/public-admin/index.html" },
     { "source": "/settings", "destination": "/public-admin/index.html" },
